@@ -8,7 +8,6 @@
 <title>MFD Duty Roster · Drive Sync</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* ========== COMPLETE CSS (same as before, omitted for brevity – include all styles from previous working version) ========== */
 :root{
   --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;--bg4:#475569;
   --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.16);
@@ -24,355 +23,413 @@
   --r:10px;--rl:14px
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent}
 input,select,button,textarea{font-family:inherit}
 .screen{display:none;flex-direction:column;min-height:100vh}
 .screen.active{display:flex}
-/* ========== paste all your original CSS from the previous answer here ========== */
-/* For space, I'm including only the essential new additions; in production you must copy the full CSS from your working file. */
-/* I'll assume the full CSS is present – the final answer will contain it. */
+
+/* LOGIN */
+#s-login{align-items:center;justify-content:center;padding:2rem 1rem}
+.login-logo{width:64px;height:64px;background:var(--abg);border:1px solid var(--accent);border-radius:18px;display:flex;align-items:center;justify-content:center;margin-bottom:1.2rem}
+.login-logo svg{width:34px;height:34px;stroke:var(--accent);fill:none;stroke-width:1.5}
+.login-org{font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;text-align:center;margin-bottom:4px}
+.login-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:1.5rem}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1.5rem;width:100%;max-width:360px}
+.lbl{font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:500}
+.inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-size:14px;padding:10px 12px;margin-bottom:11px;outline:none;transition:border-color .2s}
+.inp:focus{border-color:var(--accent)}
+.inp option{background:var(--bg2)}
+.btn-pri{width:100%;background:var(--accent);color:#0c1a27;border:none;border-radius:var(--r);padding:11px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .18s}
+.btn-pri:hover{opacity:.85}
+.login-links{display:flex;justify-content:center;gap:16px;margin-top:1rem;font-size:12px;color:var(--text3)}
+.login-links a{color:var(--accent);text-decoration:none;cursor:pointer}
+
+.type-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px}
+.type-btn{padding:10px 6px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);cursor:pointer;text-align:center;transition:all .18s}
+.type-btn.obs.sel{border-color:var(--obs);background:var(--obsbg)}
+.type-btn.fore.sel{border-color:var(--fore);background:var(--forebg)}
+.type-btn.sdm.sel{border-color:var(--sdm);background:var(--sdmbg)}
+.type-label{font-size:11px;font-weight:700;color:var(--text)}
+.type-sub{font-size:9px;color:var(--text3);margin-top:2px}
+
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:11px 15px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;flex-shrink:0}
+.tb-left{display:flex;flex-direction:column}
+.tb-greeting{font-size:10px;color:var(--text3)}
+.tb-name{font-size:15px;font-weight:700}
+.tb-right{display:flex;gap:7px;align-items:center}
+.ib{background:var(--bg3);border:1px solid var(--border);border-radius:8px;width:35px;height:35px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:background .15s;flex-shrink:0}
+.ib:hover{background:var(--border2)}
+.ib svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.type-badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+.badge-obs{background:var(--obsbg);color:var(--obs);border:1px solid var(--obs)}
+.badge-fore{background:var(--forebg);color:var(--fore);border:1px solid var(--fore)}
+.badge-sdm{background:var(--sdmbg);color:var(--sdm);border:1px solid var(--sdm)}
+
+.notif-banner{margin:10px 14px 0;border-radius:var(--r);padding:11px 13px;display:none;flex-shrink:0}
+.nb-duty{background:var(--abg);border:1px solid var(--accent)}
+.nb-off{background:var(--gbg);border:1px solid var(--green)}
+
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab-btn{flex:1;padding:10px 4px;font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2px solid transparent;transition:color .15s}
+.tab-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-pane{display:none;padding:14px;flex:1;overflow-y:auto}
+.tab-pane.active{display:block}
+
+.month-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px 13px}
+.month-row select{background:transparent;border:none;color:var(--text);font-size:13px;font-weight:700;outline:none;cursor:pointer;flex:1}
+.month-row select option{background:var(--bg2)}
+.month-meta{font-size:11px;color:var(--text3);white-space:nowrap}
+
+.sh{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}
+.s-AO{background:var(--gbg);color:var(--green)}
+.s-MO{background:var(--gbg);color:var(--green)}
+.s-AON{background:var(--pbg);color:var(--purple)}
+.s-A1{background:var(--abg);color:var(--accent)}
+.s-A2{background:var(--ambg);color:var(--amber)}
+.s-MF{background:var(--forebg);color:var(--fore)}
+.s-AF{background:var(--abg);color:var(--accent)}
+.s-DA{background:var(--ambg);color:var(--amber)}
+.s-MA{background:var(--pbg);color:var(--purple)}
+.s-SDM{background:var(--sdmbg);color:var(--sdm)}
+.s-OFF{background:rgba(100,116,139,.15);color:var(--text3)}
+.s-OTH{background:var(--bg3);color:var(--text2)}
+
+.week-block{margin-bottom:16px}
+.wk-lbl{font-size:10px;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px}
+.day-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:5px;gap:8px}
+.day-row.today{border-color:var(--accent);background:var(--abg)}
+.dr-left{display:flex;flex-direction:column;min-width:74px}
+.dr-dn{font-size:10px;color:var(--text3)}
+.dr-date{font-size:14px;font-weight:700}
+.dr-gate{font-size:10px;color:var(--text3)}
+.today-chip{font-size:10px;background:var(--accent);color:#0c1a27;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap}
+
+.sum-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
+.sum-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
+.sum-num{font-size:26px;font-weight:700}
+.sum-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+.cal-hc{text-align:center;font-size:9px;color:var(--text3);padding:3px 0;text-transform:uppercase}
+.cal-body{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-cell{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:4px 3px;min-height:48px}
+.cal-cell.today{border-color:var(--accent)}
+.cal-cell.empty{background:transparent;border-color:transparent}
+.cal-dn{font-size:10px;font-weight:700;color:var(--text2);margin-bottom:2px}
+.cal-cell.today .cal-dn{color:var(--accent)}
+.cal-pip{font-size:8px;padding:1px 3px;border-radius:3px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:1px}
+
+.sec-lbl{font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 8px}
+.duty-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:5px}
+.dr-person{display:flex;align-items:center;gap:9px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0}
+.person-n{font-size:13px;font-weight:600}
+.off-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.off-chip{font-size:11px;padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text3)}
+
+.archive-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.archive-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .18s}
+.archive-card:hover{border-color:var(--accent)}
+.archive-card.latest{border-color:var(--green);background:var(--gbg)}
+.ac-name{font-size:13px;font-weight:700;margin-bottom:3px}
+.ac-sub{font-size:10px;color:var(--text3)}
+.ac-tag{font-size:9px;padding:2px 6px;border-radius:20px;font-weight:700;display:inline-block;margin-top:5px}
+.ac-tag-obs{background:var(--obsbg);color:var(--obs)}
+.ac-tag-fore{background:var(--forebg);color:var(--fore)}
+.ac-tag-sdm{background:var(--sdmbg);color:var(--sdm)}
+.arc-detail{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px;margin-bottom:14px;display:none}
+.arc-detail.show{display:block}
+.arc-det-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.arc-det-title{font-size:14px;font-weight:700}
+
+.admin-scroll{flex:1;overflow-y:auto;padding:14px}
+.a-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.a-tab{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap}
+.a-tab.active{background:var(--accent);color:#0c1a27;border-color:var(--accent)}
+.a-pane{display:none}
+.a-pane.active{display:block}
+.a-sec{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:15px;margin-bottom:14px}
+.a-sec h2{font-size:13px;font-weight:700;margin-bottom:12px}
+.f-row{margin-bottom:9px}
+.f-lbl{font-size:12px;color:var(--text2);margin-bottom:4px;display:block;font-weight:500}
+.f-inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-size:13px;padding:8px 11px;outline:none}
+.f-inp:focus{border-color:var(--accent)}
+.f-inp option{background:var(--bg2)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn-g{background:var(--green);color:#052e16;border:none;border-radius:var(--r);padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .18s;white-space:nowrap}
+.btn-g:hover{opacity:.85}
+.btn-fw{width:100%}
+.btn-d{background:var(--rbg);color:var(--red);border:1px solid var(--red);border-radius:var(--r);padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-o{background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:var(--r);padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-a{background:var(--ambg);color:var(--amber);border:1px solid var(--amber);border-radius:var(--r);padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-sm{padding:5px 10px;font-size:11px}
+.list-row{display:flex;align-items:flex-start;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);gap:8px}
+.list-row:last-child{border-bottom:none}
+.list-main{font-size:13px;font-weight:600}
+.list-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.list-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:5px}
+.pill-obs{background:var(--obsbg);color:var(--obs)}
+.pill-fore{background:var(--forebg);color:var(--fore)}
+.pill-sdm{background:var(--sdmbg);color:var(--sdm)}
+.pill-latest{background:var(--gbg);color:var(--green);border:1px solid var(--green)}
+
+.ed-day-row{display:flex;align-items:flex-start;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:5px}
+.ed-day-left{min-width:65px;flex-shrink:0}
+.ed-day-date{font-size:13px;font-weight:700}
+.ed-day-name{font-size:10px;color:var(--text3)}
+.ed-shifts{flex:1;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.ed-edit-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:3px;border-radius:5px;flex-shrink:0;transition:color .15s}
+.ed-edit-btn:hover{color:var(--accent)}
+.ed-edit-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+
+.modal-wrap{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:flex-end;justify-content:center}
+.modal-sheet{background:var(--bg2);border-radius:var(--rl) var(--rl) 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:20px 16px 36px}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:3px}
+.modal-sub{font-size:12px;color:var(--text3);margin-bottom:16px}
+.modal-person-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.modal-person-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.modal-sh-sel{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:12px;padding:6px 10px;outline:none;min-width:110px}
+.modal-acts{display:flex;gap:8px;margin-top:16px}
+.modal-acts button{flex:1;padding:10px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;border:none}
+.modal-save{background:var(--green);color:#052e16}
+.modal-cancel{background:var(--bg3);color:var(--text2)}
+
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:26px 16px;text-align:center;cursor:pointer;transition:all .2s;position:relative;margin-bottom:10px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--abg)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{font-size:28px;margin-bottom:8px}
+.uz-text{font-size:13px;font-weight:600;color:var(--text2)}
+.uz-sub{font-size:11px;color:var(--text3);margin-top:4px}
+
+.file-preview{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 13px;margin-bottom:10px;display:none}
+.fp-name{font-size:13px;font-weight:600;color:var(--accent)}
+.fp-info{font-size:11px;color:var(--text3);margin-top:3px}
+.fp-sheets{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
+.fp-sheet{font-size:11px;padding:4px 11px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;color:var(--text2);cursor:pointer}
+.fp-sheet.sel{background:var(--abg);border-color:var(--accent);color:var(--accent)}
+.xlsx-preview{overflow-x:auto;margin-top:10px;border:1px solid var(--border);border-radius:var(--r)}
+.xlsx-preview table{width:100%;font-size:10px;border-collapse:collapse;min-width:400px}
+.xlsx-preview th{background:var(--bg3);padding:5px 7px;text-align:left;font-size:10px;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
+.xlsx-preview td{padding:4px 7px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap}
+.xlsx-preview tr.header-row td{background:var(--bg3);font-weight:700;color:var(--accent)}
+
+.status-box{font-size:12px;padding:9px 12px;border-radius:var(--r);margin:8px 0;display:none;line-height:1.5}
+.st-ok{background:var(--gbg);border:1px solid var(--green);color:var(--green);display:block}
+.st-err{background:var(--rbg);border:1px solid var(--red);color:var(--red);display:block}
+.st-load{background:var(--ambg);border:1px solid var(--amber);color:var(--amber);display:block}
+.info-box{background:var(--bg3);border-radius:var(--r);padding:10px 13px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:11px}
+.divider{height:1px;background:var(--border);margin:12px 0}
+
+.drive-status{border-radius:var(--r);padding:10px 13px;margin-bottom:12px;font-size:12px;line-height:1.5;display:flex;align-items:flex-start;gap:9px}
+.ds-connected{background:var(--gbg);border:1px solid var(--green)}
+.ds-disconnected{background:var(--ambg);border:1px solid var(--amber)}
+.ds-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.ds-dot-g{background:var(--green)}
+.ds-dot-a{background:var(--amber)}
+
+.spinner{width:13px;height:13px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--green);color:#052e16;padding:9px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:92vw;text-align:center}
+.toast.show{opacity:1}
+.toast.t-err{background:var(--red);color:#fff}
+.toast.t-info{background:var(--accent);color:#0c1a27}
 </style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
 
-<!-- LOGIN SCREEN (same as before) -->
-<div class="screen active" id="s-login">...</div>
+<!-- LOGIN -->
+<div class="screen active" id="s-login">
+  <div class="login-logo"><svg viewBox="0 0 24 24"><path d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg></div>
+  <p class="login-org">Dept. of Hydrology &amp; Meteorology · Nepal</p>
+  <h1 class="login-title">MFD Duty Roster</h1>
+  <div class="login-card">
+    <label class="lbl">Select your role</label>
+    <div class="type-row">
+      <div class="type-btn obs" id="type-obs" onclick="selType('obs')"><div class="type-label">🔭 Observer</div><div class="type-sub">AO / MO duties</div></div>
+      <div class="type-btn fore" id="type-fore" onclick="selType('fore')"><div class="type-label">🌤 Forecaster</div><div class="type-sub">MF / AF duties</div></div>
+      <div class="type-btn sdm" id="type-sdm" onclick="selType('sdm')"><div class="type-label">⭐ Sr. Met</div><div class="type-sub">SDM duties</div></div>
+    </div>
+    <label class="lbl">Select your name</label>
+    <select class="inp" id="login-name"></select>
+    <button class="btn-pri" onclick="doLogin()">View My Roster</button>
+    <div class="login-links"><a onclick="openAdminLogin()">🔑 Admin panel</a></div>
+  </div>
+</div>
 
-<!-- USER APP SCREEN -->
+<!-- USER APP -->
 <div class="screen" id="s-app">
   <div class="topbar">
     <div class="tb-left"><span class="tb-greeting">Welcome,</span><span class="tb-name" id="app-username"></span></div>
     <div class="tb-right">
       <span class="type-badge" id="app-badge"></span>
-      <div class="ib" onclick="syncFromSharedUrl()" title="Sync from shared Drive folder">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z"/></svg>
-      </div>
-      <div class="ib" onclick="requestNotifPerm()" title="Notifications">...</div>
-      <div class="ib" onclick="doLogout()" title="Log out">...</div>
+      <div class="ib" onclick="syncFromSharedUrl()" title="Sync from shared Drive folder"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z"/></svg></div>
+      <div class="ib" onclick="requestNotifPerm()" title="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+      <div class="ib" onclick="doLogout()" title="Log out"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></div>
     </div>
   </div>
-  <div class="notif-banner" id="notif-banner"></div>
-  <div class="tabs">...</div>
-  <div class="tab-pane active" id="pane-mine">...</div>
-  <div class="tab-pane" id="pane-cal">...</div>
-  <div class="tab-pane" id="pane-today">...</div>
-  <div class="tab-pane" id="pane-archive">...</div>
+  <div class="notif-banner" id="notif-banner"><div class="nb-title" id="nb-title"></div><div class="nb-body" id="nb-body"></div></div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tb-mine" onclick="showTab('mine')"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>My Duties</button>
+    <button class="tab-btn" id="tb-cal" onclick="showTab('cal')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendar</button>
+    <button class="tab-btn" id="tb-today" onclick="showTab('today')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Today</button>
+    <button class="tab-btn" id="tb-archive" onclick="showTab('archive')"><svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archive</button>
+  </div>
+  <div class="tab-pane active" id="pane-mine"><div class="month-row"><select id="sel-mine" onchange="renderMine()"></select><span class="month-meta" id="meta-mine"></span></div><div id="mine-list"></div><div class="sum-grid" id="mine-sum"></div></div>
+  <div class="tab-pane" id="pane-cal"><div class="month-row"><select id="sel-cal" onchange="renderCal()"></select><span class="month-meta" id="meta-cal"></span></div><div class="cal-head"><div class="cal-hc">Sun</div><div class="cal-hc">Mon</div><div class="cal-hc">Tue</div><div class="cal-hc">Wed</div><div class="cal-hc">Thu</div><div class="cal-hc">Fri</div><div class="cal-hc">Sat</div></div><div class="cal-body" id="cal-body"></div></div>
+  <div class="tab-pane" id="pane-today"><div id="today-content"></div></div>
+  <div class="tab-pane" id="pane-archive"><div id="archive-content"></div></div>
 </div>
 
-<!-- ADMIN SCREEN (simplified for brevity, but includes Drive scanner) -->
+<!-- ADMIN -->
 <div class="screen" id="s-admin">
-  <div class="topbar">...</div>
+  <div class="topbar"><div class="tb-left"><span class="tb-greeting">Admin Panel</span><span class="tb-name" id="admin-name-lbl"></span></div><div class="tb-right"><div class="ib" onclick="backToLogin()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div></div></div>
   <div class="admin-scroll">
-    <div class="a-tabs">
+    <div class="a-tabs" id="admin-tabs">
       <button class="a-tab active" onclick="aTab(this,'upload')">📂 Upload</button>
       <button class="a-tab" onclick="aTab(this,'drive')">☁️ Drive Sync</button>
+      <button class="a-tab" onclick="aTab(this,'edit')">✏️ Edit</button>
       <button class="a-tab" onclick="aTab(this,'staff')">👥 Staff</button>
+      <button class="a-tab" onclick="aTab(this,'months')">📋 Months</button>
+      <button class="a-tab" id="tab-admins" onclick="aTab(this,'admins')">🔑 Admins</button>
     </div>
-    <div class="a-pane active" id="ap-upload"><!-- existing upload UI --></div>
+    <div class="a-pane active" id="ap-upload">
+      <div class="a-sec"><h2>📤 Upload XLSX (Local)</h2><div class="upload-zone" id="upload-zone"><input type="file" id="xlsx-input" accept=".xlsx,.xls" onchange="handleFile(event)"><div class="uz-icon">📊</div><div class="uz-text">Tap or drag XLSX</div></div><div class="file-preview" id="file-preview"><div class="fp-name" id="fp-name"></div><div class="fp-info" id="fp-info"></div><div class="fp-sheets" id="fp-sheets"></div><div id="xlsx-raw-preview" class="xlsx-preview"></div></div><div id="import-opts" style="display:none"><div class="g2"><div class="f-row"><label class="f-lbl">Month name</label><input class="f-inp" id="imp-mname"></div><div class="f-row"><label class="f-lbl">Nepali name</label><input class="f-inp" id="imp-nepali"></div></div><div class="f-row"><label class="f-lbl">Roster type</label><select class="f-inp" id="imp-type"><option value="obs">Observer</option><option value="fore">Forecaster</option><option value="sdm">Sr. Met</option></select></div><div class="f-row"><label class="f-lbl">Header row (staff names)</label><input type="number" class="f-inp" id="imp-headerrow" value="1"></div><button class="btn-g btn-fw" onclick="doImport()">⬇️ Import</button><div id="imp-status" class="status-box"></div></div></div>
+      <div class="a-sec"><h2>📦 Import Log</h2><div id="import-log"></div></div>
+    </div>
     <div class="a-pane" id="ap-drive">
-      <div class="a-sec">
-        <h2>📁 Connect Google Drive & Select Monthly Roster</h2>
-        <div id="drive-status" class="drive-status ds-disconnected"></div>
-        <button class="btn-o" onclick="initDriveAuth()">🔑 Connect Drive</button>
-        <div id="drive-file-list" style="margin-top:12px"></div>
+      <div class="a-sec"><h2>🔗 Set Shared Source (Google Drive)</h2>
+        <div class="info-box">All users will sync from the URL you set here. You must publish your Google Sheet as CSV (File → Share → Publish to web → CSV).</div>
+        <div id="drive-status-ui" class="drive-status ds-disconnected"><div class="ds-dot ds-dot-a"></div><div><strong>Drive not connected</strong><br>Connect to browse your "Roster" folder</div></div>
+        <div class="g2"><button class="btn-o" onclick="initDriveAuth()">🔑 Connect Drive</button><button class="btn-o" id="btn-scan-drive" onclick="scanDriveFolder()" style="display:none">🔍 Scan Roster Folder</button></div>
+        <div id="drive-file-list"></div>
         <div class="divider"></div>
-        <div class="f-row">
-          <label class="f-lbl">Or enter public CSV URL (if already published)</label>
-          <input class="f-inp" id="public-url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
-        </div>
-        <button class="btn-g" onclick="saveSharedUrl()">💾 Save as Shared Source</button>
+        <div class="f-row"><label class="f-lbl">Public CSV URL (from published sheet)</label><input class="f-inp" id="public-url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"></div>
+        <div class="g2"><div class="f-row"><label class="f-lbl">Roster type for this URL</label><select class="f-inp" id="shared-type"><option value="obs">Observer</option><option value="fore">Forecaster</option><option value="sdm">Sr. Met</option></select></div><div class="f-row"><label class="f-lbl">Header row (staff names)</label><input type="number" class="f-inp" id="shared-hrow" value="1"></div></div>
+        <div class="g2"><div class="f-row"><label class="f-lbl">Month name (English)</label><input class="f-inp" id="shared-mname" placeholder="Jestha 2083"></div><div class="f-row"><label class="f-lbl">Nepali name</label><input class="f-inp" id="shared-nepali" placeholder="जेठ २०८३"></div></div>
+        <button class="btn-g btn-fw" onclick="saveSharedSource()">💾 Save as Shared Source</button>
         <div id="shared-status" class="status-box"></div>
       </div>
     </div>
-    <div class="a-pane" id="ap-staff"><!-- staff management --></div>
+    <div class="a-pane" id="ap-edit"><div class="a-sec"><h2>✏️ Edit Duties</h2><div class="g2"><div class="f-row"><label class="f-lbl">Roster type</label><select class="f-inp" id="ed-type" onchange="fillEdMonths();renderEdList()"><option value="obs">Observer</option><option value="fore">Forecaster</option><option value="sdm">Sr. Met</option></select></div><div class="f-row"><label class="f-lbl">Month</label><select class="f-inp" id="ed-month" onchange="renderEdList()"></select></div></div><div id="ed-list"></div></div></div>
+    <div class="a-pane" id="ap-staff"><div class="a-sec"><h2>🔭 Observers</h2><div id="obs-staff-list"></div><div style="display:flex;gap:7px;margin-top:10px"><input type="text" class="f-inp" id="obs-add-inp" placeholder="Add name"><button class="btn-g" onclick="addStaff('obs')">+ Add</button></div></div><div class="a-sec"><h2>🌤 Forecasters</h2><div id="fore-staff-list"></div><div style="display:flex;gap:7px;margin-top:10px"><input type="text" class="f-inp" id="fore-add-inp" placeholder="Add name"><button class="btn-g" onclick="addStaff('fore')">+ Add</button></div></div><div class="a-sec"><h2>⭐ Sr. Met</h2><div id="sdm-staff-list"></div><div style="display:flex;gap:7px;margin-top:10px"><input type="text" class="f-inp" id="sdm-add-inp" placeholder="Add name"><button class="btn-g" onclick="addStaff('sdm')">+ Add</button></div></div></div>
+    <div class="a-pane" id="ap-months"><div class="a-sec"><h2>📋 All Months</h2><div id="all-months-list"></div></div></div>
+    <div class="a-pane" id="ap-admins"><div class="a-sec"><h2>🔑 Master PIN</h2><div class="f-row"><label class="f-lbl">New PIN (4‑6 digits)</label><input type="password" class="f-inp" id="new-pin-inp" maxlength="6"></div><button class="btn-g" onclick="saveMasterPin()">Save PIN</button></div><div class="a-sec"><h2>👤 Sub‑Admins</h2><div id="sub-admin-list"></div><div class="divider"></div><div class="g2"><div class="f-row"><label class="f-lbl">Name</label><input class="f-inp" id="sa-name"></div><div class="f-row"><label class="f-lbl">PIN</label><input type="password" class="f-inp" id="sa-pin" maxlength="6"></div></div><div class="f-row"><label class="f-lbl">Permissions</label><select class="f-inp" id="sa-perm"><option value="all">All rosters</option><option value="obs">Observer only</option><option value="fore">Forecaster only</option><option value="sdm">Sr. Met only</option></select></div><button class="btn-g" onclick="addSubAdmin()">Add Sub‑Admin</button></div></div>
   </div>
 </div>
 
+<!-- MODALS -->
+<div class="modal-wrap" id="edit-modal" style="display:none" onclick="bgClose(event)"><div class="modal-sheet"><div class="modal-title" id="modal-title"></div><div class="modal-sub" id="modal-sub"></div><div id="modal-rows"></div><div class="modal-acts"><button class="modal-cancel" onclick="closeModal()">Cancel</button><button class="modal-save" onclick="saveModal()">✓ Save</button></div></div></div>
+<div class="overlay" id="drive-modal" style="display:none"><div class="overlay-box"><div class="ob-title">☁️ Connect Drive</div><div class="ob-body">Paste your OAuth Client ID (Web application) from Google Cloud Console.<br><a href="https://console.cloud.google.com" target="_blank">Get Client ID</a></div><input class="f-inp" id="gd-cid" placeholder="Client ID"><div class="ob-acts"><button onclick="closeDriveModal()">Cancel</button><button onclick="saveDriveClient()">Connect</button></div></div></div>
+
 <script>
-// ========== STORAGE KEYS ==========
-const K = { R: 'mfd_roster', S: 'mfd_staff', A: 'mfd_admins', MP: 'mfd_pin', SHARED: 'shared_roster_url', GD: 'gd_token' };
-const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } };
-const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true } catch { return false } };
+// ========== STORAGE ==========
+const K={R:'mfd_roster',S:'mfd_staff',A:'mfd_admins',MP:'mfd_pin',SHARED:'shared_roster_url',GD:'gd_token',LOG:'mfd_log'};
+const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}};
 
-let GD_TOKEN = null;
-let currentUser = '', currentRole = 'obs';
-let isAdmin = false, isMaster = false;
+function getRoster(){return load(K.R,{obs:[],fore:[],sdm:[]});}
+function saveRoster(r){return save(K.R,r);}
+function getStaff(){return load(K.S,{obs:['Biju','Jeni','Jyoti','Menka','Munesh','Pratima','Rasmi'],fore:[],sdm:['Mean','Bibhudi']});}
+function saveStaff(s){return save(K.S,s);}
+function getAdmins(){return load(K.A,[]);}
+function saveAdmins(a){return save(K.A,a);}
+function getMPin(){return load(K.MP,'1234');}
+function getSharedConfig(){return load(K.SHARED,{url:'',type:'obs',headerRow:1,mname:'',nepali:''});}
+function saveSharedConfig(c){return save(K.SHARED,c);}
+function getLog(){return load(K.LOG,[]);}
+function saveLog(l){return save(K.LOG,l);}
 
-// ========== ROSTER & STAFF ==========
-function getRoster() { return load(K.R, { obs: [], fore: [], sdm: [] }); }
-function saveRoster(r) { return save(K.R, r); }
-function getStaff() { return load(K.S, { obs: [], fore: [], sdm: [] }); }
-function saveStaff(s) { return save(K.S, s); }
-function getSharedUrl() { return load(K.SHARED, ''); }
+let GD_TOKEN=null, CU='', CT='obs', IA=false, IM=false, CAO=null, WB=null, SEL_SHEET='';
+let MOD={type:'',mid:'',di:-1};
 
-// ========== DRIVE OAUTH (admin only) ==========
-function initDriveAuth() {
-  const clientId = prompt("Enter your Google OAuth Client ID (from Google Cloud Console):");
-  if (!clientId) return;
-  const redirectUri = window.location.href.split('?')[0].split('#')[0];
-  const scope = 'https://www.googleapis.com/auth/drive.readonly';
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=select_account`;
-  window.location.href = url;
-}
+// ========== UTILS ==========
+function toast(msg,cls=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(cls==='err'?' t-err':cls==='info'?' t-info':'');t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
+const todayISO=()=>new Date().toISOString().split('T')[0];
+const initials=n=>(n||'?').slice(0,2).toUpperCase();
+function dutyClass(code){if(!code)return's-OFF';const c=code.toString().trim().toUpperCase();if(c===''||c==='XX'||c==='-'||c==='OFF')return's-OFF';if(c.startsWith('AO')||c==='MO'||c==='MO*')return's-AO';if(c.startsWith('AON'))return's-AON';if(c==='A1')return's-A1';if(c==='A2')return's-A2';if(c.startsWith('MF'))return's-MF';if(c.startsWith('AF')||c.startsWith('AFN'))return's-AF';if(c==='DA'||c.startsWith('DA'))return's-DA';if(c==='MA'||c.startsWith('MA'))return's-MA';return's-OTH';}
+function dutyLabel(code){if(!code)return'Off';const c=code.toString().trim().toUpperCase();if(c===''||c==='XX'||c==='-'||c==='OFF')return'Off';return code.toString().trim();}
+function isOffDuty(code){if(!code)return true;const c=code.toString().trim().toUpperCase();return c===''||c==='XX'||c==='-'||c==='OFF';}
 
-function handleOAuthRedirect() {
-  const hash = window.location.hash;
-  if (hash && hash.includes('access_token=')) {
-    const token = new URLSearchParams(hash.slice(1)).get('access_token');
-    if (token) {
-      GD_TOKEN = token;
-      save(K.GD, token);
-      history.replaceState(null, '', window.location.pathname);
-      toast('Drive connected', 'info');
-      scanDriveFolder();
-    }
-  } else {
-    GD_TOKEN = load(K.GD, null);
-    if (GD_TOKEN) scanDriveFolder();
-  }
-}
+// ========== LOGIN ==========
+let _t='obs';
+function selType(t){_t=t;['obs','fore','sdm'].forEach(x=>document.getElementById('type-'+x).classList.toggle('sel',x===t));fillNameDrop();}
+function fillNameDrop(){const sel=document.getElementById('login-name');const staff=getStaff()[_t]||[];sel.innerHTML='<option value="">-- Select --</option>';staff.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});}
+function doLogin(){const name=document.getElementById('login-name').value;if(!name){toast('Select name','err');return;}CU=name;CT=_t;IA=false;IM=false;showApp();}
+function openAdminLogin(){const pin=prompt('Admin PIN:');if(!pin)return;if(pin===getMPin()){IM=true;IA=true;CAO=null;showAdmin('Master Admin');return;}const found=getAdmins().find(a=>a.pin===pin);if(found){IA=true;IM=false;CAO=found;showAdmin(found.name);return;}toast('Wrong PIN','err');}
+function doLogout(){showScreen('s-login');}
+function backToLogin(){showScreen('s-login');}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
-async function scanDriveFolder() {
-  if (!GD_TOKEN) return;
-  const listDiv = document.getElementById('drive-file-list');
-  if (!listDiv) return;
-  listDiv.innerHTML = '<div class="spinner"></div> Searching for "Roster" folder...';
-  try {
-    // Find folder named "Roster"
-    const folderResp = await fetch('https://www.googleapis.com/drive/v3/files?q=name="Roster" and mimeType="application/vnd.google-apps.folder" and trashed=false&fields=files(id,name)', {
-      headers: { Authorization: `Bearer ${GD_TOKEN}` }
-    });
-    const folderData = await folderResp.json();
-    if (!folderData.files || folderData.files.length === 0) throw new Error('No folder named "Roster" found.');
-    const folderId = folderData.files[0].id;
-    // List xlsx files in that folder
-    const filesResp = await fetch(`https://www.googleapis.com/drive/v3/files?q="${folderId}" in parents and trashed=false and (name contains ".xlsx" or name contains ".xls")&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, {
-      headers: { Authorization: `Bearer ${GD_TOKEN}` }
-    });
-    const filesData = await filesResp.json();
-    const files = filesData.files || [];
-    if (files.length === 0) throw new Error('No Excel files found in Roster folder.');
-    listDiv.innerHTML = '<div style="font-weight:700;margin-bottom:8px">📁 Select the current month\'s roster:</div>';
-    files.forEach(file => {
-      const btn = document.createElement('button');
-      btn.textContent = `📊 ${file.name} (${new Date(file.modifiedTime).toLocaleDateString()})`;
-      btn.className = 'btn-o btn-sm';
-      btn.style.margin = '4px';
-      btn.onclick = () => useDriveFile(file.id, file.name);
-      listDiv.appendChild(btn);
-    });
-  } catch (err) {
-    listDiv.innerHTML = `<div style="color:var(--red)">❌ ${err.message}</div>`;
-  }
-}
+function showApp(){showScreen('s-app');document.getElementById('app-username').textContent=CU;const b=document.getElementById('app-badge');const labels={obs:'Observer',fore:'Forecaster',sdm:'Sr. Meteorologist'};const cls={obs:'badge-obs',fore:'badge-fore',sdm:'badge-sdm'};b.textContent=labels[CT]||CT;b.className='type-badge '+(cls[CT]||'');fillMonthDrops();renderMine();renderCal();renderToday();renderArchive();checkTodayDuty();requestNotifPerm();}
+function showTab(t){['mine','cal','today','archive'].forEach(n=>{document.getElementById('tb-'+n).classList.toggle('active',n===t);document.getElementById('pane-'+n).classList.toggle('active',n===t);});if(t==='cal')renderCal();if(t==='today')renderToday();if(t==='archive')renderArchive();}
 
-async function useDriveFile(fileId, fileName) {
-  toast('Preparing public link...', 'info');
-  // We cannot directly fetch xlsx from Drive without token, so we instruct admin to publish the sheet
-  const publicCsvUrl = `https://docs.google.com/spreadsheets/d/${fileId}/export?format=csv`;
-  // Show instructions
-  const confirmMsg = `To share with all users without login, you must publish this sheet as CSV.\n\n1. Open this file in Google Sheets:\nhttps://docs.google.com/spreadsheets/d/${fileId}\n2. Click File → Share → Publish to web\n3. Choose "Comma-separated values (.csv)"\n4. Click Publish\n5. Copy the generated URL (it will look like https://docs.google.com/spreadsheets/d/e/.../pub?output=csv)\n\nAfter publishing, paste that URL below.\n\n(Alternatively, use the CSV export link above, but it requires the file to be shared with "Anyone with the link can view".)`;
-  const publishedUrl = prompt(confirmMsg, publicCsvUrl);
-  if (publishedUrl && publishedUrl.trim()) {
-    document.getElementById('public-url').value = publishedUrl.trim();
-    saveSharedUrl();
-  }
-}
+function getMonths(t){return(getRoster()[t]||[]);}
+function getLatest(t){const ms=getMonths(t);if(!ms.length)return null;return ms.slice().sort((a,b)=>((b.startDate||'')>(a.startDate||''))?1:-1)[0];}
+function fillMonthDrops(){['mine','cal'].forEach(id=>{const sel=document.getElementById('sel-'+id);sel.innerHTML='';getMonths(CT).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name+(m.nepali?' · '+m.nepali:'');sel.appendChild(o);});const lat=getLatest(CT);if(lat)sel.value=lat.id;});}
+function getSelM(id){const v=document.getElementById(id).value;return getMonths(CT).find(m=>m.id===v)||getLatest(CT);}
 
-function saveSharedUrl() {
-  const url = document.getElementById('public-url').value.trim();
-  if (!url) { toast('Enter a valid URL', 'err'); return; }
-  save(K.SHARED, url);
-  toast('Shared source saved. Users can now sync.', 'info');
-  document.getElementById('shared-status').innerHTML = '<div class="st-ok">✅ Shared URL saved.</div>';
-  setTimeout(() => document.getElementById('shared-status').innerHTML = '', 3000);
-}
+function renderMine(){const m=getSelM('sel-mine');const el=document.getElementById('mine-list');if(!m){el.innerHTML='<p style="color:var(--text3);text-align:center;padding:1.5rem">No roster. Ask admin to sync.</p>';document.getElementById('mine-sum').innerHTML='';return;}document.getElementById('meta-mine').textContent=m.nepali||'';const today=todayISO();let counts={n:0,on:0,off:0},html='',wk=[],wi=0;m.days.forEach((d,i)=>{const s=(d.duties||{})[CU]||'xx';wk.push({...d,s});if(wk.length===7||i===m.days.length-1){html+=`<div class="week-block"><div class="wk-lbl">Week ${++wi}</div>`;wk.forEach(wd=>{const it=wd.isoDate===today;if(isOffDuty(wd.s))counts.off++;else counts.on++;if(!isOffDuty(wd.s)&&(wd.s.toUpperCase().includes('AON')||wd.s.toUpperCase().includes('AFN')))counts.n++;html+=`<div class="day-row${it?' today':''}"><div class="dr-left"><span class="dr-dn">${wd.day||''}</span><span class="dr-date">${(wd.isoDate||'').slice(5).replace('-','/')}</span><span class="dr-gate">${wd.date} गते</span></div><span class="sh ${dutyClass(wd.s)}">${dutyLabel(wd.s)}</span>${it?'<span class="today-chip">Today</span>':''}</div>`;});html+='</div>';wk=[];}});el.innerHTML=html;document.getElementById('mine-sum').innerHTML=`<div class="sum-card"><div class="sum-num" style="color:var(--green)">${counts.on}</div><div class="sum-lbl">Duty days</div></div><div class="sum-card"><div class="sum-num" style="color:var(--text3)">${counts.off}</div><div class="sum-lbl">Off</div></div><div class="sum-card"><div class="sum-num" style="color:var(--purple)">${counts.n}</div><div class="sum-lbl">Night duties</div></div><div class="sum-card"><div class="sum-num" style="color:var(--accent)">${m.days.length}</div><div class="sum-lbl">Total days</div></div>`;}
+function renderCal(){const m=getSelM('sel-cal');const el=document.getElementById('cal-body');if(!m){el.innerHTML='';return;}document.getElementById('meta-cal').textContent=m.nepali||'';const today=todayISO();const staff=getStaff()[CT]||[];const startDow=m.startDate?new Date(m.startDate+'T00:00:00').getDay():0;let html='';for(let i=0;i<startDow;i++)html+='<div class="cal-cell empty"></div>';m.days.forEach(d=>{const it=d.isoDate===today;const active=staff.map(n=>({n,s:(d.duties||{})[n]})).filter(x=>x.s&&!isOffDuty(x.s));html+=`<div class="cal-cell${it?' today':''}"><div class="cal-dn">${d.date}</div>${active.slice(0,3).map(x=>`<div class="cal-pip" style="background:${dutyColor(x.s)}22;color:${dutyColor(x.s)}">${x.n.slice(0,4)}</div>`).join('')}${active.length>3?`<div style="font-size:8px;color:var(--text3)">+${active.length-3}</div>`:''}</div>`;});el.innerHTML=html;}
+function dutyColor(code){if(!code)return '#64748b';const c=code.toString().trim().toUpperCase();if(c===''||c==='XX'||c==='-'||c==='OFF')return '#64748b';if(c.startsWith('AO')||c==='MO'||c==='MO*')return '#4ade80';if(c.startsWith('AON'))return '#a78bfa';if(c==='A1')return '#38bdf8';if(c==='A2')return '#fbbf24';if(c.startsWith('MF'))return '#22d3ee';if(c.startsWith('AF')||c.startsWith('AFN'))return '#60a5fa';if(c==='DA'||c.startsWith('DA'))return '#fbbf24';if(c==='MA'||c.startsWith('MA'))return '#a78bfa';return '#94a3b8';}
+function renderToday(){const today=todayISO(),roster=getRoster();let fd=null,fm=null;(roster[CT]||[]).forEach(m=>{const d=m.days.find(d=>d.isoDate===today);if(d&&!fd){fd=d;fm=m;}});const el=document.getElementById('today-content');if(!fd){el.innerHTML=`<p style="color:var(--text3);text-align:center;padding:2rem">No roster for today.<br>Tap sync button if admin published a new month.</p>`;return;}const staff=getStaff()[CT]||[];const duties=fd.duties||{};const onDuty=staff.filter(n=>!isOffDuty(duties[n]));const offDuty=staff.filter(n=>isOffDuty(duties[n]));el.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:12px"><div style="font-size:10px;color:var(--text3)">${fm.name}${fm.nepali?' · '+fm.nepali:''}</div><div style="font-size:15px;font-weight:700">${fd.day||''}, ${today} <span style="font-size:11px;color:var(--text3)">· ${fd.date} गते</span></div></div><div class="sec-lbl">On duty (${onDuty.length})</div>${onDuty.map(n=>`<div class="duty-row"><div class="dr-person"><div class="avatar">${initials(n)}</div><span class="person-n">${n}</span></div><span class="sh ${dutyClass(duties[n])}">${dutyLabel(duties[n])}</span></div>`).join('')||'<p style="color:var(--text3)">None</p>'}${offDuty.length?`<div class="sec-lbl" style="margin-top:14px">Off today</div><div class="off-chips">${offDuty.map(n=>`<span class="off-chip">${n}</span>`).join('')}</div>`:''}`;}
+function renderArchive(){const months=[...getMonths(CT)].sort((a,b)=>((b.startDate||'')>(a.startDate||''))?1:-1);const el=document.getElementById('archive-content');if(!months.length){el.innerHTML='<p style="color:var(--text3);text-align:center;padding:2rem">No archive.</p>';return;}const typeTag={obs:'ac-tag-obs',fore:'ac-tag-fore',sdm:'ac-tag-sdm'};const typeLbl={obs:'Observer',fore:'Forecaster',sdm:'Sr. Met'};let html=`<div class="arc-detail" id="arc-det"><div class="arc-det-hd"><div class="arc-det-title" id="arc-det-title"></div><button style="background:var(--bg3);border:none;color:var(--text2);border-radius:7px;padding:4px 10px;cursor:pointer;font-size:12px" onclick="closeArcDet()">✕ Close</button></div><div id="arc-det-body"></div></div><div class="archive-grid">`;months.forEach(m=>{html+=`<div class="archive-card" onclick="openArcDet('${m.id}')"><div class="ac-name">${m.name}</div><div class="ac-sub">${m.nepali||''}</div><div class="ac-sub" style="margin-top:3px">${m.days.length} days</div><div><span class="ac-tag ${typeTag[CT]}">${typeLbl[CT]}</span></div></div>`;});html+='</div>';el.innerHTML=html;}
+function openArcDet(mid){const m=getMonths(CT).find(x=>x.id===mid);if(!m)return;const staff=getStaff()[CT]||[];document.getElementById('arc-det-title').textContent=m.name+(m.nepali?' · '+m.nepali:'');const counts={};staff.forEach(n=>counts[n]={});m.days.forEach(d=>{staff.forEach(n=>{const s=(d.duties||{})[n]||'xx';counts[n][s]=(counts[n][s]||0)+1;});});let html=`<div style="overflow-x:auto;margin-bottom:12px"><table style="width:100%;font-size:11px;border-collapse:collapse"><tr><th style="text-align:left;padding:4px 8px">Name</th><th>Duties</th><th>Off</th></tr>${staff.map(n=>{const c=counts[n]||{};const offCnt=(c['xx']||0)+(c['-']||0)+(c['OFF']||0);const dutyBreakdown=Object.entries(c).filter(([k])=>!isOffDuty(k)).map(([k,v])=>`<span class="sh ${dutyClass(k)}" style="font-size:9px;padding:1px 5px">${k}:${v}</span>`).join(' ');return `<tr><td style="padding:5px 8px;font-weight:600">${n}</td><td style="padding:5px 8px">${dutyBreakdown||'—'}</td><td style="color:var(--text3)">${offCnt}</td></tr>`;}).join('')}</table></div><div style="font-weight:700;margin-bottom:6px">Day by day</div>`;m.days.forEach(d=>{const pills=staff.map(n=>{const s=(d.duties||{})[n]||'xx';return `<span class="sh ${dutyClass(s)}" style="font-size:9px;padding:1px 5px">${n.split(' ')[0]}:${s}</span>`;}).join(' ');html+=`<div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="min-width:50px">${d.date} गते</span><span style="display:flex;flex-wrap:wrap;gap:3px">${pills}</span></div>`;});document.getElementById('arc-det-body').innerHTML=html;document.getElementById('arc-det').classList.add('show');}
+function closeArcDet(){document.getElementById('arc-det').classList.remove('show');}
+function requestNotifPerm(){if(!('Notification' in window))return;if(Notification.permission==='default')Notification.requestPermission().then(p=>{if(p==='granted')checkTodayDuty(true);});}
+function checkTodayDuty(notif=false){const today=todayISO(),roster=getRoster();let shift=null;(roster[CT]||[]).forEach(m=>{const d=m.days.find(d=>d.isoDate===today);if(d)shift=(d.duties||{})[CU]||'xx';});const banner=document.getElementById('notif-banner');if(!shift){banner.style.display='none';return;}if(!isOffDuty(shift)){banner.className='notif-banner nb-duty';banner.style.display='block';document.getElementById('nb-title').textContent='📋 On duty today!';document.getElementById('nb-body').innerHTML=`Duty: <strong>${dutyLabel(shift)}</strong>`;if(notif&&Notification.permission==='granted')new Notification('MFD – On duty!',{body:`${CU}: ${shift}`});}else{banner.className='notif-banner nb-off';banner.style.display='block';document.getElementById('nb-title').textContent='✅ Day off';document.getElementById('nb-body').textContent='No duty today.';}}
 
-// ========== SYNC FOR USERS ==========
-async function syncFromSharedUrl(showToast = true) {
-  const url = getSharedUrl();
-  if (!url) {
-    if (showToast) toast('No shared roster URL set by admin.', 'err');
-    return;
-  }
-  const el = document.getElementById('imp-status'); // reuse status box
-  if (el) { el.className = 'status-box st-load'; el.innerHTML = '<span class="spinner"></span> Fetching roster from shared link...'; }
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const csvText = await response.text();
-    // Parse CSV into rows
-    const rows = parseCSV(csvText);
-    if (rows.length < 2) throw new Error('CSV has no data rows.');
-    // The first row is header
-    const headerRow = rows[0];
-    const dataRows = rows.slice(1);
-    // We need to guess roster type from URL or ask user? For simplicity, assume admin sets type in settings.
-    // But we can let the user pick? Better: admin also saves the roster type along with URL.
-    let type = 'obs'; // default
-    // Try to detect from URL: "obs", "fore", "sdm"
-    if (url.includes('observer')) type = 'obs';
-    else if (url.includes('forecaster')) type = 'fore';
-    else if (url.includes('sdm')) type = 'sdm';
-    else {
-      type = prompt('Which roster type is this? (obs/fore/sdm)', 'obs');
-      if (!['obs','fore','sdm'].includes(type)) type = 'obs';
-    }
-    const monthName = prompt('Month name (e.g., Jestha 2083):', '');
-    if (!monthName) throw new Error('Month name required');
-    const nepaliName = prompt('Nepali name (optional):', '');
-    const headerRowIdx = 0; // CSV first row is header
-    const result = parseSheetRows(rows, headerRowIdx, type);
-    if (result.error) throw new Error(result.error);
-    // Commit to local storage
-    commitRoster(result, type, monthName, nepaliName, url);
-    if (el) { el.className = 'status-box st-ok'; el.innerHTML = `✅ Synced ${result.days.length} days for ${monthName}`; setTimeout(() => el.innerHTML = '', 4000); }
-    if (showToast) toast(`Roster updated: ${monthName}`, 'info');
-    // Refresh UI
-    if (document.getElementById('s-app').classList.contains('active')) {
-      fillMonthDrops(); renderMine(); renderCal(); renderToday(); renderArchive();
-    }
-  } catch (err) {
-    if (el) { el.className = 'status-box st-err'; el.innerHTML = `❌ Sync failed: ${err.message}`; }
-    toast('Sync failed: ' + err.message, 'err');
-  }
-}
+// ========== ADMIN UI ==========
+function showAdmin(name){showScreen('s-admin');document.getElementById('admin-name-lbl').textContent=name;document.getElementById('tab-admins').style.display=IM?'':'none';renderStaffLists();renderAllMonths();fillEdMonths();renderEdList();renderImportLog();if(IM)renderSubAdmins();refreshDriveStatusUI();aTab(document.querySelector('.a-tab'),'upload');}
+function aTab(btn,name){document.querySelectorAll('.a-tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.a-pane').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('ap-'+name).classList.add('active');if(name==='edit'){fillEdMonths();renderEdList();}}
+function renderStaffLists(){['obs','fore','sdm'].forEach(t=>{const staff=getStaff()[t]||[];const canEdit=IM||(CAO&&(CAO.perm==='all'||CAO.perm===t));const el=document.getElementById(t+'-staff-list');el.innerHTML=staff.length?staff.map((n,i)=>`<div class="list-row"><div class="list-main">${n}</div><div class="list-actions"><button class="btn-a btn-sm" onclick="renameStaff('${t}',${i})">Rename</button>${canEdit?`<button class="btn-d btn-sm" onclick="removeStaff('${t}',${i})">Remove</button>`:''}</div></div>`).join(''):'<p style="font-size:12px;color:var(--text3)">No staff.</p>';});}
+function addStaff(t){const inp=document.getElementById(t+'-add-inp');const name=inp.value.trim();if(!name)return;const s=getStaff();s[t]=s[t]||[];if(s[t].includes(name)){toast('Exists','err');return;}s[t].push(name);if(saveStaff(s)){inp.value='';renderStaffLists();fillNameDrop();toast('Added');}}
+function removeStaff(t,i){const s=getStaff();if(!confirm('Remove '+s[t][i]+'?'))return;s[t].splice(i,1);if(saveStaff(s)){renderStaffLists();fillNameDrop();toast('Removed');}}
+function renameStaff(t,i){const s=getStaff();const old=s[t][i];const nw=prompt('Rename to:',old);if(!nw||nw.trim()===old)return;const r=getRoster();(r[t]||[]).forEach(m=>m.days.forEach(d=>{if(d.duties&&d.duties[old]!==undefined){d.duties[nw.trim()]=d.duties[old];delete d.duties[old];}}));s[t][i]=nw.trim();if(saveStaff(s)&&saveRoster(r)){renderStaffLists();fillNameDrop();toast('Renamed');}}
+function fillEdMonths(){const type=document.getElementById('ed-type')?.value||'obs';const sel=document.getElementById('ed-month');sel.innerHTML='<option value="">-- Select --</option>';getMonths(type).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name;sel.appendChild(o);});}
+function renderEdList(){if(!IA){document.getElementById('ed-list').innerHTML='<p style="color:var(--red)">Admin only</p>';return;}const type=document.getElementById('ed-type')?.value;const mid=document.getElementById('ed-month')?.value;const r=getRoster();const month=(r[type]||[]).find(m=>m.id===mid);if(!month){document.getElementById('ed-list').innerHTML='<p>Select month</p>';return;}const staff=getStaff()[type]||[];let html='';month.days.forEach((d,di)=>{const duties=d.duties||{};const pills=staff.map(n=>{const s=duties[n]||'xx';return `<span class="sh ${dutyClass(s)}" style="font-size:9px;padding:2px 5px">${n.split(' ')[0]}:${s}</span>`;}).join('');html+=`<div class="ed-day-row"><div class="ed-day-left"><div class="ed-day-date">${d.date} गते</div><div class="ed-day-name">${d.day||''}</div></div><div class="ed-shifts">${pills}</div><button class="ed-edit-btn" onclick="openModal('${type}','${mid}',${di})"><svg viewBox="0 0 24 24" width="15" height="15"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div>`;});document.getElementById('ed-list').innerHTML=html||'<p>No days</p>';}
+let MOD_ALL_CODES=[];
+function openModal(type,mid,di){if(!IA){toast('Admin only','err');return;}const r=getRoster();const month=(r[type]||[]).find(m=>m.id===mid);if(!month)return;const day=month.days[di];MOD={type,mid,di};const staff=getStaff()[type]||[];const seen=new Set(['xx','-']);month.days.forEach(d=>Object.values(d.duties||{}).forEach(v=>seen.add(v)));MOD_ALL_CODES=[...seen].sort();document.getElementById('modal-title').textContent=`Edit ${day.date} गते`;document.getElementById('modal-sub').textContent=month.name;const cur=day.duties||{};document.getElementById('modal-rows').innerHTML=staff.map(n=>`<div class="modal-person-row"><div class="modal-person-name"><div class="avatar">${initials(n)}</div>${n}</div><select class="modal-sh-sel" id="msel-${CSS.escape(n)}">${MOD_ALL_CODES.map(c=>`<option value="${c}"${c===(cur[n]||'xx')?' selected':''}>${c}</option>`).join('')}</select></div>`).join('');document.getElementById('edit-modal').style.display='flex';}
+function closeModal(){document.getElementById('edit-modal').style.display='none';}
+function bgClose(e){if(e.target===document.getElementById('edit-modal'))closeModal();}
+function saveModal(){if(!IA){toast('Admin only','err');closeModal();return;}const r=getRoster();const month=(r[MOD.type]||[]).find(m=>m.id===MOD.mid);if(!month)return;const day=month.days[MOD.di];if(!day.duties)day.duties={};getStaff()[MOD.type].forEach(n=>{const sel=document.getElementById('msel-'+CSS.escape(n));if(sel)day.duties[n]=sel.value;});if(saveRoster(r)){closeModal();renderEdList();renderMine();renderCal();renderToday();toast('Saved');}}
+function renderAllMonths(){const r=getRoster();const all=[...r.obs.map(m=>({...m,type:'obs'})),...r.fore.map(m=>({...m,type:'fore'})),...r.sdm.map(m=>({...m,type:'sdm'}))].sort((a,b)=>((b.startDate||'')>(a.startDate||''))?1:-1);const tcls={obs:'pill-obs',fore:'pill-fore',sdm:'pill-sdm'};document.getElementById('all-months-list').innerHTML=all.length?all.map(m=>`<div class="list-row"><div><div class="list-main">${m.name}<span class="pill ${tcls[m.type]}">${m.type}</span></div><div class="list-sub">${m.nepali||''} · ${m.days.length} days</div></div><button class="btn-d btn-sm" onclick="deleteMonth('${m.type}','${m.id}')">Delete</button></div>`).join(''):'<p>No months</p>';}
+function deleteMonth(type,id){if(!confirm('Delete month?'))return;const r=getRoster();r[type]=(r[type]||[]).filter(m=>m.id!==id);if(saveRoster(r)){renderAllMonths();fillMonthDrops();fillEdMonths();toast('Deleted');}}
+function renderSubAdmins(){const a=getAdmins();document.getElementById('sub-admin-list').innerHTML=a.length?a.map((x,i)=>`<div class="list-row"><div><div class="list-main">${x.name}</div><div class="list-sub">PIN: ${'•'.repeat(x.pin.length)}</div><div class="sa-perms"><span class="perm-tag pt-${x.perm==='all'?'all':x.perm}">${x.perm}</span></div></div><div class="list-actions"><button class="btn-a btn-sm" onclick="editPin(${i})">Change PIN</button><button class="btn-d btn-sm" onclick="removeAdmin(${i})">Remove</button></div></div>`).join(''):'<p>No sub-admins</p>';}
+function addSubAdmin(){const name=document.getElementById('sa-name').value.trim();const pin=document.getElementById('sa-pin').value.trim();const perm=document.getElementById('sa-perm').value;if(!name||pin.length<4){toast('Name & 4+ digit PIN','err');return;}if(pin===getMPin()){toast('Cannot use master PIN','err');return;}const a=getAdmins();if(a.find(x=>x.name===name)){toast('Name taken','err');return;}a.push({name,pin,perm});if(saveAdmins(a)){document.getElementById('sa-name').value='';document.getElementById('sa-pin').value='';renderSubAdmins();toast('Added');}}
+function removeAdmin(i){const a=getAdmins();if(!confirm('Remove?'))return;a.splice(i,1);if(saveAdmins(a))renderSubAdmins();}
+function editPin(i){const a=getAdmins();const np=prompt('New PIN (4-6 digits):');if(!np||np.length<4){toast('Invalid PIN','err');return;}a[i].pin=np;if(saveAdmins(a))renderSubAdmins();}
+function saveMasterPin(){const pin=document.getElementById('new-pin-inp').value.trim();if(pin.length<4){toast('4+ digits','err');return;}save(K.MP,pin);toast('Master PIN updated');document.getElementById('new-pin-inp').value='';}
 
-// Simple CSV parser (handles quoted fields)
-function parseCSV(text) {
-  const rows = [];
-  const regex = /(?:,|\n|^)("(?:(?:"")*[^"]*)*"|[^",\n]*|(?:\n|$))/g;
-  let match;
-  let row = [];
-  while ((match = regex.exec(text)) !== null) {
-    let value = match[1];
-    if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1).replace(/""/g, '"');
-    row.push(value);
-    if (text[match.index + match[0].length] === '\n') {
-      rows.push(row);
-      row = [];
-    }
-  }
-  if (row.length) rows.push(row);
-  return rows;
-}
+// ========== XLSX PARSER ==========
+const SKIP_COLS=new Set(['day','date','iso','gate','no','sn','#','s.n','sr.no','remarks','remark','note','notes','total','leave','incharge','check','weekly','shift','code','gates','वार','गते','स्न']);
+function isSkipCol(l){if(!l)return true;const ll=l.toString().trim().toLowerCase();if(/^\d+$/.test(ll))return true;return SKIP_COLS.has(ll);}
+function parseSheetRows(rows,headerRowIdx,type){if(!rows||rows.length<=headerRowIdx)return{error:'No data'};const headerRow=rows[headerRowIdx];let colDay=-1,colGate=-1,colISO=-1;const staffCols=[];headerRow.forEach((h,i)=>{if(!h)return;const hs=h.toString().trim();const hl=hs.toLowerCase();if(colDay<0&&(hl==='day'||hl==='वार'||hl==='bar'))colDay=i;else if(colGate<0&&(hl.includes('गते')||hl==='date'||hl==='no'||hl==='s.n'||hl==='sn'||hl==='#'))colGate=i;else if(colISO<0&&(hl.includes('iso')||hl.includes('yyyy')||hl.includes('-mm-')))colISO=i;else if(!isSkipCol(hs))staffCols.push({name:hs,col:i});});if(colDay<0)colDay=0;if(colGate<0)colGate=1;if(!staffCols.length)return{error:'No staff columns found'};const days=[];let startDate='';const WEEKDAYS_NP={आइत:'Sun',सोम:'Mon',मंगल:'Tue',बुध:'Wed',बिहि:'Thu',शुक्र:'Fri',शनि:'Sat'};for(let ri=headerRowIdx+1;ri<rows.length;ri++){const row=rows[ri];if(!row||row.every(c=>!c||String(c).trim()===''))continue;const rawGate=row[colGate];if(rawGate===undefined||rawGate===null||String(rawGate).trim()==='')continue;const gateNum=parseInt(String(rawGate).trim());if(isNaN(gateNum)||gateNum<1||gateNum>32)continue;let dayName=colDay>=0?String(row[colDay]||'').trim():'';if(WEEKDAYS_NP[dayName])dayName=WEEKDAYS_NP[dayName];let iso='';if(colISO>=0&&row[colISO]){let raw=String(row[colISO]).trim();if(raw.match(/^\d{4}-\d{2}-\d{2}/))iso=raw.slice(0,10);else{const n=parseFloat(raw);if(!isNaN(n)&&n>40000){const d=new Date((n-25569)*86400*1000);iso=d.toISOString().split('T')[0];}else{const d=new Date(raw);if(!isNaN(d.getTime()))iso=d.toISOString().split('T')[0];}}}if(iso&&!startDate)startDate=iso;const duties={};staffCols.forEach(sc=>{const val=row[sc.col]===undefined||row[sc.col]===null?'xx':String(row[sc.col]).trim()||'xx';duties[sc.name]=val;});days.push({date:gateNum,isoDate:iso,day:dayName,duties});}if(!days.length)return{error:'No duty rows'};return{days,staffNames:staffCols.map(s=>s.name),startDate};}
+function commitRoster(result,type,mname,mnepali,source){const id=type+'-'+mname.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');const r=getRoster();r[type]=r[type]||[];const ei=r[type].findIndex(m=>m.id===id);const mo={id,name:mname,nepali:mnepali,type,startDate:result.startDate,days:result.days,importedAt:new Date().toISOString(),source};if(ei>=0)r[type][ei]=mo;else r[type].push(mo);if(!saveRoster(r)){toast('Save failed','err');return;}const s=getStaff();s[type]=s[type]||[];result.staffNames.forEach(n=>{if(n&&!s[type].includes(n))s[type].push(n);});saveStaff(s);const log=getLog();log.unshift({id,name:mname,nepali:mnepali,type,importedAt:new Date().toISOString(),days:result.days.length,staff:result.staffNames.length,source});if(log.length>100)log.splice(100);saveLog(log);renderAllMonths();fillMonthDrops();fillEdMonths();renderImportLog();renderStaffLists();fillNameDrop();if(CT===type){renderMine();renderCal();renderToday();renderArchive();}toast(`Imported ${result.days.length} days`,'info');}
+function handleFile(e){const f=e.target.files[0];if(f)processFile(f);}
+function processFile(file){if(!file.name.match(/\.xlsx?$/i)){toast('Not an Excel file','err');return;}const reader=new FileReader();reader.onload=ev=>{try{WB=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});SEL_SHEET=WB.SheetNames[0];document.getElementById('fp-name').textContent=file.name;document.getElementById('fp-info').textContent=`${WB.SheetNames.length} sheets`;renderSheetTabs();document.getElementById('file-preview').style.display='block';document.getElementById('import-opts').style.display='block';const mn=file.name.replace(/\.xlsx?$/i,'').replace(/_/g,' ');document.getElementById('imp-mname').value=mn;showSheetPreview();toast('File loaded','info');}catch(err){toast('Error reading file','err');}};reader.readAsArrayBuffer(file);}
+function renderSheetTabs(){const el=document.getElementById('fp-sheets');el.innerHTML=(WB.SheetNames||[]).map((s,i)=>`<div class="fp-sheet${i===0?' sel':''}" onclick="pickSheet(this,'${s.replace(/'/g,"\\'")}')">${s}</div>`).join('');}
+function pickSheet(el,name){document.querySelectorAll('.fp-sheet').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');SEL_SHEET=name;showSheetPreview();}
+function showSheetPreview(){if(!WB||!SEL_SHEET)return;const ws=WB.Sheets[SEL_SHEET];const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});const hrow=parseInt(document.getElementById('imp-headerrow')?.value||1)-1;const previewRows=rows.slice(0,Math.min(12,rows.length));const maxCols=Math.max(...previewRows.map(r=>r.length),0);if(!maxCols){document.getElementById('xlsx-raw-preview').innerHTML='<p>Empty</p>';return;}let html=`<table><thead><tr><th>#</th>${Array.from({length:Math.min(maxCols,12)},(_,i)=>`<th>${String.fromCharCode(65+i)}</th>`).join('')}</tr></thead><tbody>`;previewRows.forEach((row,ri)=>{const isH=ri===hrow;html+=`<tr class="${isH?'header-row':''}"><td style="color:var(--text3);font-size:9px">${ri+1}${isH?' ★':''}</td>`;for(let ci=0;ci<Math.min(maxCols,12);ci++){html+=`<td>${(row[ci]!==undefined&&row[ci]!==null)?String(row[ci]).slice(0,14):''}</td>`;}html+='</tr>';});html+='</tbody></table>';document.getElementById('xlsx-raw-preview').innerHTML=html;}
+document.addEventListener('DOMContentLoaded',()=>{const hri=document.getElementById('imp-headerrow');if(hri)hri.addEventListener('input',showSheetPreview);const uz=document.getElementById('upload-zone');if(uz){uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processFile(f);});}});
+function doImport(){if(!WB||!SEL_SHEET){toast('Load a file first','err');return;}const mname=document.getElementById('imp-mname').value.trim();const mnepali=document.getElementById('imp-nepali').value.trim();const type=document.getElementById('imp-type').value;const hrow=parseInt(document.getElementById('imp-headerrow').value||1)-1;if(!mname){toast('Enter month name','err');return;}const el=document.getElementById('imp-status');el.className='status-box st-load';el.innerHTML='<span class="spinner"></span>Parsing...';try{const ws=WB.Sheets[SEL_SHEET];const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});const result=parseSheetRows(rows,hrow,type);if(result.error)throw new Error(result.error);commitRoster(result,type,mname,mnepali,SEL_SHEET);el.className='status-box st-ok';el.innerHTML=`✅ ${result.days.length} days, ${result.staffNames.length} staff`;}catch(e){el.className='status-box st-err';el.textContent='❌ '+e.message;}}
+function renderImportLog(){const log=getLog();const tcls={obs:'pill-obs',fore:'pill-fore',sdm:'pill-sdm'};const el=document.getElementById('import-log');if(!el)return;el.innerHTML=log.length?log.map((f,i)=>`<div class="list-row"><div><div class="list-main">${f.name}<span class="pill ${tcls[f.type]}">${f.type}</span>${i===0?'<span class="pill pill-latest">Latest</span>':''}</div><div class="list-sub">${f.days} days · ${new Date(f.importedAt).toLocaleDateString()}</div></div><button class="btn-d btn-sm" onclick="delLog(${i})">✕</button></div>`).join(''):'<p>No uploads</p>';}
+function delLog(i){const l=getLog();l.splice(i,1);saveLog(l);renderImportLog();}
 
-// ========== PARSER (exactly the same as before) ==========
-const SKIP_COLS = new Set(['day','date','iso','gate','no','sn','#','s.n','sr.no','remarks','remark','note','notes','total','leave','incharge','check','weekly','shift','code','gates','वार','गते','स्न']);
-function isSkipCol(label) {
-  if (!label) return true;
-  const l = label.toString().trim().toLowerCase();
-  if (/^\d+$/.test(l)) return true;
-  return SKIP_COLS.has(l);
-}
-function parseSheetRows(rows, headerRowIdx, type) {
-  if (!rows || rows.length <= headerRowIdx) return { error: 'No data after header row' };
-  const headerRow = rows[headerRowIdx];
-  let colDay = -1, colGate = -1, colISO = -1;
-  const staffCols = [];
-  headerRow.forEach((h, i) => {
-    if (!h) return;
-    const hs = h.toString().trim();
-    const hl = hs.toLowerCase();
-    if (colDay < 0 && (hl === 'day' || hl === 'वार' || hl === 'bar')) colDay = i;
-    else if (colGate < 0 && (hl.includes('गते') || hl === 'date' || hl === 'no' || hl === 's.n' || hl === 'sn' || hl === '#')) colGate = i;
-    else if (colISO < 0 && (hl.includes('iso') || hl.includes('yyyy') || hl.includes('-mm-'))) colISO = i;
-    else if (!isSkipCol(hs)) staffCols.push({ name: hs, col: i });
-  });
-  if (colDay < 0) colDay = 0;
-  if (colGate < 0) colGate = 1;
-  if (!staffCols.length) return { error: 'No staff columns found. Check header row.' };
-  const days = [];
-  let startDate = '';
-  const WEEKDAYS_NP = { आइत: 'Sun', सोम: 'Mon', मंगल: 'Tue', बुध: 'Wed', बिहि: 'Thu', शुक्र: 'Fri', शनि: 'Sat' };
-  for (let ri = headerRowIdx + 1; ri < rows.length; ri++) {
-    const row = rows[ri];
-    if (!row || row.every(c => !c || String(c).trim() === '')) continue;
-    const rawGate = row[colGate];
-    if (rawGate === undefined || rawGate === null || String(rawGate).trim() === '') continue;
-    const gateNum = parseInt(String(rawGate).trim());
-    if (isNaN(gateNum) || gateNum < 1 || gateNum > 32) continue;
-    let dayName = colDay >= 0 ? String(row[colDay] || '').trim() : '';
-    if (WEEKDAYS_NP[dayName]) dayName = WEEKDAYS_NP[dayName];
-    let iso = '';
-    if (colISO >= 0 && row[colISO]) {
-      let raw = String(row[colISO]).trim();
-      if (raw.match(/^\d{4}-\d{2}-\d{2}/)) iso = raw.slice(0, 10);
-      else {
-        const n = parseFloat(raw);
-        if (!isNaN(n) && n > 40000) {
-          const d = new Date((n - 25569) * 86400 * 1000);
-          iso = d.toISOString().split('T')[0];
-        } else {
-          const d = new Date(raw);
-          if (!isNaN(d.getTime())) iso = d.toISOString().split('T')[0];
-        }
-      }
-    }
-    if (iso && !startDate) startDate = iso;
-    const duties = {};
-    staffCols.forEach(sc => {
-      const val = row[sc.col] === undefined || row[sc.col] === null ? 'xx' : String(row[sc.col]).trim() || 'xx';
-      duties[sc.name] = val;
-    });
-    days.push({ date: gateNum, isoDate: iso, day: dayName, duties });
-  }
-  if (!days.length) return { error: 'No valid duty rows found.' };
-  return { days, staffNames: staffCols.map(s => s.name), startDate };
-}
+// ========== DRIVE OAUTH & SHARED SOURCE ==========
+function initDriveAuth(){const clientId=prompt('Enter your Google OAuth Client ID (Web application):');if(!clientId)return;const redirectUri=window.location.href.split('?')[0].split('#')[0];const scope='https://www.googleapis.com/auth/drive.readonly';const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=select_account`;window.location.href=url;}
+function handleOAuthRedirect(){const hash=window.location.hash;if(hash&&hash.includes('access_token=')){const token=new URLSearchParams(hash.slice(1)).get('access_token');if(token){GD_TOKEN=token;save(K.GD,token);history.replaceState(null,'',window.location.pathname);toast('Drive connected','info');refreshDriveStatusUI();scanDriveFolder();}}else{GD_TOKEN=load(K.GD,null);if(GD_TOKEN)scanDriveFolder();}}
+async function scanDriveFolder(){if(!GD_TOKEN)return;const listDiv=document.getElementById('drive-file-list');if(!listDiv)return;listDiv.innerHTML='<div class="spinner"></div> Searching "Roster" folder...';try{const folderResp=await fetch('https://www.googleapis.com/drive/v3/files?q=name="Roster" and mimeType="application/vnd.google-apps.folder" and trashed=false&fields=files(id,name)',{headers:{Authorization:`Bearer ${GD_TOKEN}`}});const folderData=await folderResp.json();if(!folderData.files||folderData.files.length===0)throw new Error('No folder named "Roster" found.');const folderId=folderData.files[0].id;const filesResp=await fetch(`https://www.googleapis.com/drive/v3/files?q="${folderId}" in parents and trashed=false and (name contains ".xlsx" or name contains ".xls")&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`,{headers:{Authorization:`Bearer ${GD_TOKEN}`}});const filesData=await filesResp.json();const files=filesData.files||[];if(files.length===0)throw new Error('No Excel files in Roster folder.');listDiv.innerHTML='<div style="font-weight:700;margin-bottom:8px">📁 Select current month\'s roster:</div>';files.forEach(file=>{const btn=document.createElement('button');btn.textContent=`📊 ${file.name} (${new Date(file.modifiedTime).toLocaleDateString()})`;btn.className='btn-o btn-sm';btn.style.margin='4px';btn.onclick=()=>useDriveFile(file.id,file.name);listDiv.appendChild(btn);});}catch(err){listDiv.innerHTML=`<div style="color:var(--red)">❌ ${err.message}</div>`;}}
+async function useDriveFile(fileId,fileName){const publicCsvUrl=`https://docs.google.com/spreadsheets/d/${fileId}/export?format=csv`;const confirmMsg=`To share with all users, you must publish this sheet as CSV.\n\n1. Open: https://docs.google.com/spreadsheets/d/${fileId}\n2. File → Share → Publish to web\n3. Choose "Comma-separated values (.csv)"\n4. Click Publish\n5. Copy the generated URL (starts with https://docs.google.com/spreadsheets/d/e/...)\n\nPaste the published CSV URL below:`;const publishedUrl=prompt(confirmMsg,publicCsvUrl);if(publishedUrl&&publishedUrl.trim()){document.getElementById('public-url').value=publishedUrl.trim();saveSharedSource();}}
+function saveSharedSource(){const url=document.getElementById('public-url').value.trim();const type=document.getElementById('shared-type').value;const headerRow=parseInt(document.getElementById('shared-hrow').value||1);const mname=document.getElementById('shared-mname').value.trim();const nepali=document.getElementById('shared-nepali').value.trim();if(!url){toast('Enter a public CSV URL','err');return;}const config={url,type,headerRow,mname,nepali};if(saveSharedConfig(config)){toast('Shared source saved. Users can now sync.','info');document.getElementById('shared-status').innerHTML='<div class="st-ok">✅ Saved. Users can tap sync button.</div>';setTimeout(()=>document.getElementById('shared-status').innerHTML='',4000);}}
+async function syncFromSharedUrl(){const cfg=getSharedConfig();if(!cfg.url){toast('No shared source set by admin.','err');return;}const el=document.getElementById('imp-status');if(el){el.className='status-box st-load';el.innerHTML='<span class="spinner"></span> Fetching from shared link...';}try{const resp=await fetch(cfg.url);if(!resp.ok)throw new Error(`HTTP ${resp.status}`);const csvText=await resp.text();const rows=parseCSV(csvText);if(rows.length<2)throw new Error('CSV has no data rows');const result=parseSheetRows(rows,cfg.headerRow-1,cfg.type);if(result.error)throw new Error(result.error);commitRoster(result,cfg.type,cfg.mname||'Shared Month',cfg.nepali||'',cfg.url);if(el){el.className='status-box st-ok';el.innerHTML=`✅ Synced ${result.days.length} days`;setTimeout(()=>el.innerHTML='',3000);}toast('Roster synced from shared source','info');}catch(err){if(el){el.className='status-box st-err';el.innerHTML=`❌ ${err.message}`;}toast('Sync failed: '+err.message,'err');}}
+function parseCSV(text){const rows=[];const regex=/(?:,|\n|^)("(?:(?:"")*[^"]*)*"|[^",\n]*|(?:\n|$))/g;let match;let row=[];while((match=regex.exec(text))!==null){let value=match[1];if(value.startsWith('"')&&value.endsWith('"'))value=value.slice(1,-1).replace(/""/g,'"');row.push(value);if(text[match.index+match[0].length]==='\n'){rows.push(row);row=[];}}if(row.length)rows.push(row);return rows;}
+function refreshDriveStatusUI(){const ui=document.getElementById('drive-status-ui');const scanBtn=document.getElementById('btn-scan-drive');if(!ui)return;if(GD_TOKEN){ui.className='drive-status ds-connected';ui.innerHTML='<div class="ds-dot ds-dot-g"></div><div><strong>Drive connected</strong><br>Scan your Roster folder</div>';if(scanBtn)scanBtn.style.display='';}else{ui.className='drive-status ds-disconnected';ui.innerHTML='<div class="ds-dot ds-dot-a"></div><div><strong>Drive not connected</strong><br>Click "Connect Drive"</div>';if(scanBtn)scanBtn.style.display='none';}}
 
-function commitRoster(result, type, mname, mnepali, source) {
-  const id = type + '-' + mname.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  const r = getRoster();
-  r[type] = r[type] || [];
-  const existingIdx = r[type].findIndex(m => m.id === id);
-  const newMonth = { id, name: mname, nepali: mnepali, type, startDate: result.startDate, days: result.days, importedAt: new Date().toISOString(), source };
-  if (existingIdx >= 0) r[type][existingIdx] = newMonth;
-  else r[type].push(newMonth);
-  saveRoster(r);
-  // Merge staff
-  const s = getStaff();
-  s[type] = s[type] || [];
-  result.staffNames.forEach(n => { if (n && !s[type].includes(n)) s[type].push(n); });
-  saveStaff(s);
-  // Update UI if needed
-  if (currentRole === type) { fillMonthDrops(); renderMine(); renderCal(); renderToday(); renderArchive(); }
-}
-
-// ========== UI HELPERS (simplified placeholders) ==========
-function toast(msg, cls) { /* existing implementation */ }
-function fillMonthDrops() {}
-function renderMine() {}
-function renderCal() {}
-function renderToday() {}
-function renderArchive() {}
-function doLogin() {}
-function openAdminLogin() {}
-function doLogout() {}
-function showTab(t) {}
-function requestNotifPerm() {}
-function aTab(btn, tabName) {}
-function addStaff(t) {}
-function fillEdMonths() {}
-function renderEdList() {}
-function renderStaffLists() {}
-function renderAllMonths() {}
-function renderImportLog() {}
-function renderSubAdmins() {}
-function handleFile(e) {}
-function doImport() {}
-function selType(t) {}
-function showAdmin(name) {}
-
-// Initialize
-window.addEventListener('DOMContentLoaded', () => {
-  handleOAuthRedirect();
-  selType('obs');
-  // restore shared URL display
-  const sharedUrl = getSharedUrl();
-  if (sharedUrl && document.getElementById('public-url')) document.getElementById('public-url').value = sharedUrl;
-});
+// INIT
+window.addEventListener('DOMContentLoaded',()=>{handleOAuthRedirect();refreshDriveStatusUI();selType('obs');});
 </script>
 </body>
 </html>

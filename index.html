@@ -679,8 +679,8 @@ input,select,button,textarea{font-family:inherit}
 // STORAGE
 // ═══════════════════════════════════════════════════════════════════
 const K={R:'mfd6_roster',S:'mfd6_staff',A:'mfd6_admins',MP:'mfd6_pin',GD:'mfd6_gd',LOG:'mfd6_log'};
-const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
-const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){console.warn(k,e);return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){console.error(k,e);toast('Storage error: '+e.message,'err');return false}};
 
 const getRoster=()=>load(K.R,{obs:[],fore:[],sdm:[]});
 const saveRoster=r=>save(K.R,r);
@@ -700,14 +700,9 @@ const saveLog=l=>save(K.LOG,l);
 
 // ═══════════════════════════════════════════════════════════════════
 // DUTY CLASSIFICATION
-// Observer duties: AO, MO, AON, and variants
-// Forecaster duties: MF, AF, DA, MA, and variants
-// SDM: Mean, Bibhudi columns (any duty code)
-// Anything else: shown as-is
 // ═══════════════════════════════════════════════════════════════════
 const WEEKDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-// Duty code → CSS class
 function dutyClass(code){
   if(!code)return 's-OFF';
   const c=code.toString().trim().toUpperCase();
@@ -726,7 +721,7 @@ function dutyLabel(code){
   if(!code)return 'Off';
   const c=code.toString().trim().toUpperCase();
   if(c===''||c==='XX'||c==='-'||c==='OFF')return 'Off';
-  return code.toString().trim(); // show exactly as in sheet
+  return code.toString().trim();
 }
 function dutyColor(code){
   if(!code)return '#64748b';
@@ -766,6 +761,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   selType('obs');
   checkOAuthRedirect();
   refreshDriveStatusUI();
+  // optional: log storage status
+  console.log('Storage check:', {roster:getRoster(), staff:getStaff()});
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -982,7 +979,6 @@ function openArcDet(mid){
   const staff=getStaff()[CT]||[];
   const today=todayISO();
   document.getElementById('arc-det-title').textContent=m.name+(m.nepali?' · '+m.nepali:'');
-  // Shift counts
   const counts={};
   staff.forEach(n=>{counts[n]={};});
   m.days.forEach(d=>{
@@ -1001,8 +997,7 @@ function openArcDet(mid){
       const dutyBreakdown=Object.entries(c).filter(([k])=>!isOffDuty(k)).map(([k,v])=>`<span class="sh ${dutyClass(k)}" style="font-size:9px;padding:1px 5px">${k}:${v}</span>`).join(' ');
       return `<tr style="border-top:1px solid var(--border)"><td style="padding:5px 8px;font-weight:600">${n}</td><td style="padding:5px 8px">${dutyBreakdown||'—'}</td><td style="padding:5px 8px;color:var(--text3)">${offCnt}</td></tr>`;
     }).join('')}
-   </table></div>`;
-  // Day list
+  </table></div>`;
   html+=`<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">Day by day</div>`;
   m.days.forEach(d=>{
     const it=d.isoDate===today;
@@ -1089,13 +1084,15 @@ function addStaff(t){
   const name=inp.value.trim();if(!name)return;
   const s=getStaff();s[t]=s[t]||[];
   if(s[t].includes(name)){toast('Already exists','err');return;}
-  s[t].push(name);saveStaff(s);inp.value='';
+  s[t].push(name);if(!saveStaff(s))return;
+  inp.value='';
   renderStaffLists();fillNameDrop();toast('Added: '+name);
 }
 function removeStaff(t,i){
   const s=getStaff();
   if(!confirm('Remove "'+s[t][i]+'"?'))return;
-  s[t].splice(i,1);saveStaff(s);renderStaffLists();fillNameDrop();toast('Removed');
+  s[t].splice(i,1);if(!saveStaff(s))return;
+  renderStaffLists();fillNameDrop();toast('Removed');
 }
 function renameStaff(t,i){
   const s=getStaff();const old=s[t][i];
@@ -1105,7 +1102,7 @@ function renameStaff(t,i){
   (r[t]||[]).forEach(m=>m.days.forEach(d=>{
     if(d.duties&&d.duties[old]!==undefined){d.duties[nw.trim()]=d.duties[old];delete d.duties[old];}
   }));
-  s[t][i]=nw.trim();saveStaff(s);saveRoster(r);
+  s[t][i]=nw.trim();if(!saveStaff(s)||!saveRoster(r))return;
   renderStaffLists();fillNameDrop();toast('Renamed → '+nw.trim());
 }
 
@@ -1155,7 +1152,6 @@ function openModal(type,mid,di){
   const day=month.days[di];
   MOD={type,mid,di};
   const staff=getStaff()[type]||[];
-  // Collect all duty codes seen in this roster for the dropdown
   const seen=new Set(['xx','-']);
   month.days.forEach(d=>Object.values(d.duties||{}).forEach(v=>seen.add(v)));
   MOD_ALL_CODES=[...seen].filter(Boolean).sort();
@@ -1183,7 +1179,8 @@ function saveModal(){
     const sel=document.getElementById('msel-'+CSS.escape(n));
     if(sel)day.duties[n]=sel.value;
   });
-  saveRoster(r);closeModal();renderEdList();renderMine();renderCal();renderToday();
+  if(!saveRoster(r))return;
+  closeModal();renderEdList();renderMine();renderCal();renderToday();
   toast('Duties updated ✓');
 }
 
@@ -1212,7 +1209,8 @@ function renderAllMonths(){
 function deleteMonth(type,id){
   if(!confirm('Delete this month?'))return;
   const r=getRoster();r[type]=(r[type]||[]).filter(m=>m.id!==id);
-  saveRoster(r);renderAllMonths();fillMonthDrops();fillEdMonths();toast('Deleted');
+  if(!saveRoster(r))return;
+  renderAllMonths();fillMonthDrops();fillEdMonths();toast('Deleted');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1242,19 +1240,21 @@ function addSubAdmin(){
   if(pin===getMPin()){toast('Cannot use master PIN','err');return;}
   const a=getAdmins();
   if(a.find(x=>x.name===name)){toast('Name taken','err');return;}
-  a.push({name,pin,perm});saveAdmins(a);
+  a.push({name,pin,perm});if(!saveAdmins(a))return;
   document.getElementById('sa-name').value='';document.getElementById('sa-pin').value='';
   renderSubAdmins();toast('Sub-admin added');
 }
 function removeAdmin(i){
   const a=getAdmins();if(!confirm('Remove?'))return;
-  a.splice(i,1);saveAdmins(a);renderSubAdmins();toast('Removed');
+  a.splice(i,1);if(!saveAdmins(a))return;
+  renderSubAdmins();toast('Removed');
 }
 function editPin(i){
   const a=getAdmins();
   const np=prompt('New PIN (4-6 digits):');
   if(!np||np.length<4){toast('PIN must be 4+ digits','err');return;}
-  a[i].pin=np;saveAdmins(a);renderSubAdmins();toast('PIN updated');
+  a[i].pin=np;if(!saveAdmins(a))return;
+  renderSubAdmins();toast('PIN updated');
 }
 function saveMasterPin(){
   const pin=document.getElementById('new-pin-inp').value.trim();
@@ -1267,7 +1267,6 @@ function saveMasterPin(){
 // ═══  XLSX / SHEET PARSER — reads sheet exactly as-is  ════════════
 // ═══════════════════════════════════════════════════════════════════
 
-// Non-staff column headers – exact match (case-insensitive) only
 const SKIP_COLS = new Set([
   'day', 'date', 'iso', 'gate', 'no', 'sn', '#', 's.n', 'sr.no',
   'remarks', 'remark', 'note', 'notes', 'total', 'leave', 'incharge',
@@ -1277,19 +1276,14 @@ const SKIP_COLS = new Set([
 function isSkipCol(label) {
   if (!label) return true;
   const l = label.toString().trim().toLowerCase();
-  // skip if it's a pure number (e.g., "1", "2", "123")
   if (/^\d+$/.test(l)) return true;
-  // exact match against known non-staff headers
   return SKIP_COLS.has(l);
 }
 
-// Main parser: given a 2D array of rows (from SheetJS), a header row index, and roster type
 function parseSheetRows(rows, headerRowIdx, type){
   if(!rows||rows.length<=headerRowIdx)return{error:'Sheet has no data after the header row.'};
 
   const headerRow=rows[headerRowIdx];
-
-  // Find column indices for: day-name, date-number (गते), ISO date, staff
   let colDay=-1,colGate=-1,colISO=-1;
   const staffCols=[];
 
@@ -1305,7 +1299,6 @@ function parseSheetRows(rows, headerRowIdx, type){
     }
   });
 
-  // Fallback: if no day/gate col found, assume col 0=day, col 1=gate, col 2=ISO or date
   if(colDay<0)colDay=0;
   if(colGate<0)colGate=1;
 
@@ -1324,27 +1317,22 @@ function parseSheetRows(rows, headerRowIdx, type){
   rows.slice(headerRowIdx+1).forEach((row,ri)=>{
     if(!row||row.every(c=>c===null||c===undefined||String(c).trim()===''))return;
 
-    // Get gate number
     const rawGate=row[colGate];
     if(rawGate===null||rawGate===undefined||String(rawGate).trim()==='')return;
     const gateNum=parseInt(String(rawGate).trim());
     if(isNaN(gateNum)||gateNum<1||gateNum>32)return;
 
-    // Get day name
     let dayName=colDay>=0?String(row[colDay]||'').trim():'';
     if(WEEKDAYS_NP[dayName])dayName=WEEKDAYS_NP[dayName];
 
-    // Get ISO date
     let iso='';
     if(colISO>=0&&row[colISO]){
       const raw=String(row[colISO]).trim();
       if(raw.match(/^\d{4}-\d{2}-\d{2}/))iso=raw.slice(0,10);
       else{
-        // Try Excel serial
         const n=parseFloat(raw);
         if(!isNaN(n)&&n>40000){
           try{
-            // Excel date serial: days since Jan 1 1900 (with leap year bug)
             const d=new Date((n-25569)*86400*1000);
             iso=d.toISOString().split('T')[0];
           }catch{}
@@ -1356,7 +1344,6 @@ function parseSheetRows(rows, headerRowIdx, type){
     }
     if(iso&&!startDate)startDate=iso;
 
-    // Get duties for each staff column — exactly as in sheet
     const duties={};
     staffCols.forEach(sc=>{
       const raw=row[sc.col];
@@ -1392,7 +1379,6 @@ function processFile(file){
       renderSheetTabs();
       document.getElementById('file-preview').style.display='block';
       document.getElementById('import-opts').style.display='block';
-      // Auto-detect month name from filename
       const {mn,np}=guessMonthFromName(file.name);
       if(mn)document.getElementById('imp-mname').value=mn;
       showSheetPreview();
@@ -1413,7 +1399,6 @@ function pickSheet(el,name){
   showSheetPreview();
 }
 
-// Show a raw preview of the sheet so admin can see which row has staff names
 function showSheetPreview(){
   if(!WB||!SEL_SHEET)return;
   const ws=WB.Sheets[SEL_SHEET];
@@ -1435,11 +1420,9 @@ function showSheetPreview(){
   document.getElementById('xlsx-raw-preview').innerHTML=html;
 }
 
-// Re-render preview when header row input changes
 document.addEventListener('DOMContentLoaded',()=>{
   const hri=document.getElementById('imp-headerrow');
   if(hri)hri.addEventListener('input',showSheetPreview);
-  // drag drop
   const uz=document.getElementById('upload-zone');
   if(uz){
     uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
@@ -1472,7 +1455,7 @@ function guessMonthFromName(fname){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// DO IMPORT
+// DO IMPORT (with persistence verification)
 // ═══════════════════════════════════════════════════════════════════
 function doImport(){
   if(!WB||!SEL_SHEET){toast('Load a file first','err');return;}
@@ -1509,20 +1492,31 @@ function commitRoster(result,type,mname,mnepali,source){
   const mo={id,name:mname,nepali:mnepali,type,startDate:result.startDate,days:result.days,importedAt:new Date().toISOString(),source};
   if(ei>=0){if(!confirm('Month "'+mname+'" already exists. Overwrite?'))return;r[type][ei]=mo;}
   else r[type].push(mo);
-  saveRoster(r);
+  if(!saveRoster(r)){toast('Failed to save roster to storage','err');return;}
 
-  // Merge staff names from XLSX (add new ones, keep existing)
   const s=getStaff();s[type]=s[type]||[];
-  result.staffNames.forEach(n=>{if(n&&!s[type].includes(n))s[type].push(n);});
-  saveStaff(s);
+  let added=0;
+  result.staffNames.forEach(n=>{if(n&&!s[type].includes(n)){s[type].push(n);added++;}});
+  if(added>0 && !saveStaff(s)){toast('Failed to save staff list','err');return;}
 
-  // Log
   const log=getLog();
   log.unshift({id,name:mname,nepali:mnepali,type,importedAt:new Date().toISOString(),days:result.days.length,staff:result.staffNames.length,source});
   if(log.length>100)log.splice(100);
   saveLog(log);
 
   renderAllMonths();fillMonthDrops();fillEdMonths();renderImportLog();renderStaffLists();fillNameDrop();
+
+  // If the current user view (CT) matches the uploaded type, refresh the user interface
+  if(CT===type){
+    renderMine();renderCal();renderToday();renderArchive();
+  }
+  // Verify storage persistence
+  const verify=getRoster();
+  if(!verify[type]?.find(m=>m.id===id)){
+    toast('Warning: Roster saved but could not be verified. Check storage quota.','err');
+  } else {
+    toast(`Roster saved successfully (${result.days.length} days)`, 'info');
+  }
 }
 
 function renderImportLog(){
@@ -1543,7 +1537,7 @@ function renderImportLog(){
 function delLog(i){const l=getLog();l.splice(i,1);saveLog(l);renderImportLog();}
 
 // ═══════════════════════════════════════════════════════════════════
-// GOOGLE DRIVE
+// GOOGLE DRIVE (unchanged, left as is)
 // ═══════════════════════════════════════════════════════════════════
 function checkOAuthRedirect(){
   const hash=window.location.hash;
@@ -1558,7 +1552,6 @@ function checkOAuthRedirect(){
     document.getElementById('btn-scan-drive').style.display='';
   }
 }
-
 function refreshDriveStatusUI(){
   const ui=document.getElementById('drive-status-ui');
   const scanBtn=document.getElementById('btn-scan-drive');
@@ -1573,7 +1566,6 @@ function refreshDriveStatusUI(){
     if(scanBtn)scanBtn.style.display='none';
   }
 }
-
 function openDriveModal(){
   const cfg=getGDCfg();
   document.getElementById('gd-cid').value=cfg.clientId||'';
@@ -1593,7 +1585,6 @@ function startOAuth(clientId){
   const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirect)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=select_account`;
   window.location.href=url;
 }
-
 async function scanDriveFolder(){
   if(!GD_TOKEN){toast('Connect Drive first','err');return;}
   const el=document.getElementById('drive-file-list');
@@ -1621,7 +1612,6 @@ async function scanDriveFolder(){
     el.innerHTML=`<p style="font-size:12px;color:var(--red)">❌ ${e.message}</p>`;
   }
 }
-
 function renderDriveFiles(files,el){
   const latest=files[0];
   let html=`<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">📁 Drive / Roster / (${files.length} file${files.length>1?'s':''})</div>`;
@@ -1637,7 +1627,6 @@ function renderDriveFiles(files,el){
   html+=`<button class="btn-g btn-fw" style="margin-top:8px" onclick="downloadDriveFile('${latest.id}','${latest.name.replace(/'/g,"\\'")}')">⚡ Load Latest: ${latest.name}</button>`;
   el.innerHTML=html;
 }
-
 async function downloadDriveFile(fileId,fileName){
   if(!GD_TOKEN){toast('Drive token expired, reconnect','err');return;}
   const el=document.getElementById('drive-file-list');
@@ -1666,10 +1655,6 @@ async function downloadDriveFile(fileId,fileName){
     toast('Download failed: '+e.message,'err');
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════
-// GOOGLE SHEETS URL IMPORT
-// ═══════════════════════════════════════════════════════════════════
 async function importFromSheets(){
   const url=document.getElementById('gs-url').value.trim();
   const tab=document.getElementById('gs-tab').value.trim();

@@ -243,6 +243,29 @@
 
   <!-- Drive tab -->
   <div id="tab-drive" class="tab-content hidden" style="padding:12px 0">
+
+    <!-- Setup checklist -->
+    <div class="admin-section">
+      <h3>☑️ Google Cloud Setup Checklist</h3>
+      <div style="font-size:12px;line-height:1.9;color:var(--muted)">
+        Complete these steps once before using Drive Sync:
+        <ol style="padding-left:18px;margin-top:6px">
+          <li>Go to <a href="https://console.cloud.google.com" target="_blank" style="color:var(--accent)">console.cloud.google.com</a> → create or select a project</li>
+          <li>Go to <strong>APIs &amp; Services → Library</strong></li>
+          <li>Search <strong>"Google Drive API"</strong> → click <strong>Enable</strong>
+            <a href="https://console.developers.google.com/apis/api/drive.googleapis.com/overview" target="_blank"
+               style="display:inline-block;margin-left:6px;background:var(--accent);color:#0f172a;font-weight:700;padding:1px 7px;border-radius:4px;font-size:11px;text-decoration:none">Enable ↗</a>
+          </li>
+          <li>Go to <strong>APIs &amp; Services → Credentials → Create Credentials → OAuth client ID</strong></li>
+          <li>Choose <strong>Web application</strong></li>
+          <li>Under <em>Authorized JavaScript origins</em> add:<br>
+            <code style="background:var(--surface2);padding:2px 6px;border-radius:3px;color:var(--accent)">https://lamichhanepooja1-tech.github.io</code>
+          </li>
+          <li>Copy the <strong>Client ID</strong> and paste it in Connect Drive below</li>
+        </ol>
+      </div>
+    </div>
+
     <div class="admin-section">
       <h3>🔗 Set Shared Source (Google Drive)</h3>
       <p class="text-muted text-sm" style="margin-bottom:10px;line-height:1.6">
@@ -804,19 +827,61 @@ async function scanRosterFolder(){
     }
     alert(msg);
   }catch(e){
-    const reason=e.result?.error?.message||e.message||String(e);
-    // FIX 4: Better error message for token expiry
-    if(reason.includes('401')||reason.includes('invalid_token')){
+    const err=e.result?.error||{};
+    const reason=err.message||e.message||String(e);
+    const code=err.code||e.status||0;
+    const errDetails=err.details||err.errors||[];
+    // Extract project number from error message if present
+    const projMatch=reason.match(/project[= ]+(\d+)/i);
+    const projId=projMatch?projMatch[1]:'';
+    const driveApiUrl=projId
+      ?`https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=${projId}`
+      :'https://console.developers.google.com/apis/api/drive.googleapis.com/overview';
+
+    if(code===403&&reason.toLowerCase().includes('drive')){
+      // Drive API not enabled — show rich in-page error with direct link
+      showDriveApiError(driveApiUrl, projId);
+    } else if(code===401||reason.includes('invalid_token')||reason.includes('expired')){
       S.del('mfd_drive_token');
-      alert('Drive session expired. Please reconnect Drive.');
+      state.driveToken=null;
       checkDriveConnection();
+      showScanError('Session expired. Please click <strong>Connect Drive</strong> again to sign in.');
+    } else if(code===400&&reason.includes('disabled')){
+      showDriveApiError(driveApiUrl, projId);
     } else {
-      alert('Drive scan error: '+reason);
+      showScanError('Scan failed: '+reason);
     }
   } finally {
     btn.disabled=false;
     btn.textContent='🔍 Scan Roster Folder';
   }
+}
+
+function showScanError(html){
+  const el=document.getElementById('driveStatus');
+  el.innerHTML=`<div style="color:var(--danger);font-size:12px;line-height:1.6">${html}</div>`;
+}
+
+function showDriveApiError(url, projId){
+  const el=document.getElementById('driveStatus');
+  el.innerHTML=`
+    <div style="background:#450a0a;border-radius:8px;padding:12px;font-size:12px;line-height:1.7">
+      <div style="font-weight:700;color:#fca5a5;margin-bottom:6px">⚠️ Google Drive API not enabled</div>
+      <div style="color:#fecaca;margin-bottom:8px">
+        You need to enable the <strong>Google Drive API</strong> in your Google Cloud project before scanning works.
+      </div>
+      <div style="color:#fca5a5;margin-bottom:10px">
+        ${projId?`Project: <code style="background:#7f1d1d;padding:1px 5px;border-radius:3px">${projId}</code>`:''}
+      </div>
+      <a href="${url}" target="_blank"
+         style="display:inline-block;background:#ef4444;color:#fff;font-weight:700;
+                padding:8px 14px;border-radius:6px;text-decoration:none;font-size:12px">
+        🔗 Enable Drive API now ↗
+      </a>
+      <div style="color:#94a3b8;margin-top:8px;font-size:11px">
+        After enabling, wait ~1 minute then click <strong>Scan Roster Folder</strong> again.
+      </div>
+    </div>`;
 }
 
 // ─── SHARED SOURCE (CSV) ──────────────────────────────────────────────────────

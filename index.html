@@ -154,17 +154,17 @@
     <div class="role-btn obs" data-role="observer" onclick="selectRole(this)">
       <div class="icon">🔭</div>
       <div class="label">Observer</div>
-      <div class="sub">AO / MO duties</div>
+      <div class="sub">AO · MO</div>
     </div>
     <div class="role-btn fcast" data-role="forecaster" onclick="selectRole(this)">
       <div class="icon">🌤</div>
       <div class="label">Forecaster</div>
-      <div class="sub">MF / AF duties</div>
+      <div class="sub">MF · AF · AFN</div>
     </div>
     <div class="role-btn srmet" data-role="srmet" onclick="selectRole(this)">
       <div class="icon">⭐</div>
       <div class="label">Sr. Met</div>
-      <div class="sub">SDM duties</div>
+      <div class="sub">SDM · ICT · Support</div>
     </div>
   </div>
 
@@ -429,7 +429,8 @@ let state={
 //   months: [ { id, nameEn, nameNp, type, duties:{ staffName:[{day,shift},...] } } ]
 //   sharedSources: [ { url, type, headerRow, monthEn, monthNp, addedAt } ]
 //   adminPin: "1234"
-function getData(){ return S.get('mfd_data') || {staff:{observer:[],forecaster:[],srmet:[]},months:[],sharedSources:[],adminPin:'1234'} }
+const DEFAULT_STAFF={observer:['AO','MO'],forecaster:['MF','AF','AFN'],srmet:['Bibhuti','Barun','Mean','Indra','Yuvraj','Pooja','Aakash']};
+function getData(){const s=S.get('mfd_data');if(s)return s;return{staff:JSON.parse(JSON.stringify(DEFAULT_STAFF)),months:[],sharedSources:[],adminPin:'1234'};}
 function saveData(d){ S.set('mfd_data',d) }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -619,7 +620,7 @@ function processRosterRows(rows, headerRow, type, monthEn, monthNp, source){
 
   // ── Detect summary cols at the end ──────────────────────────────────────
   // Known summary headers that are NOT staff names
-  const SUMMARY_LABELS = /^(night|af|mf|leave|total|remarks|note|अफ|एमएफ|absent|present)$/i;
+  const SUMMARY_LABELS = /^(night|leave|total|remarks|note|अफ|एमएफ|absent|present)$/i;
   let staffEndCol = headerRowData.length - 1;
   for(let c = headerRowData.length - 1; c >= staffStartCol; c--){
     const v = String(headerRowData[c]||'').trim();
@@ -663,9 +664,24 @@ function processRosterRows(rows, headerRow, type, monthEn, monthNp, source){
   }
 
   // ── Update staff list ────────────────────────────────────────────────────
+  // Also auto-assign known duty-code names to their correct role bucket
+  const DUTY_ROLE_MAP={
+    'AO':'observer','MO':'observer',
+    'MF':'forecaster','AF':'forecaster','AFN':'forecaster',
+    'Bibhuti':'srmet','Barun':'srmet','Mean':'srmet',
+    'Indra':'srmet','Yuvraj':'srmet','Pooja':'srmet','Aakash':'srmet'
+  };
   const d = getData();
   const existing = new Set(d.staff[type]||[]);
-  staffNames.forEach(n => existing.add(n));
+  staffNames.forEach(n => {
+    existing.add(n);
+    // If this name belongs to a different role bucket, add it there too
+    const mappedRole = DUTY_ROLE_MAP[n];
+    if(mappedRole && mappedRole !== type){
+      if(!d.staff[mappedRole]) d.staff[mappedRole]=[];
+      if(!d.staff[mappedRole].includes(n)) d.staff[mappedRole].push(n);
+    }
+  });
   d.staff[type] = [...existing];
 
   // ── Parse duty rows ──────────────────────────────────────────────────────

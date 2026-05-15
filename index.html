@@ -163,7 +163,7 @@
     </div>
     <div class="role-btn srmet" data-role="srmet" onclick="selectRole(this)">
       <div class="icon">⭐</div>
-      <div class="label">Sr. Met</div>
+      <div class="label">All Staff</div>
       <div class="sub">SDM · ICT · Support</div>
     </div>
   </div>
@@ -223,9 +223,9 @@
       <div class="form-group">
         <label>Roster type</label>
         <select id="upType">
+          <option value="srmet" selected>Sr. Met / All Staff</option>
           <option value="observer">Observer</option>
           <option value="forecaster">Forecaster</option>
-          <option value="srmet">Sr. Met</option>
         </select>
       </div>
       <div class="form-group">
@@ -429,7 +429,11 @@ let state={
 //   months: [ { id, nameEn, nameNp, type, duties:{ staffName:[{day,shift},...] } } ]
 //   sharedSources: [ { url, type, headerRow, monthEn, monthNp, addedAt } ]
 //   adminPin: "1234"
-const DEFAULT_STAFF={observer:['AO','MO'],forecaster:['MF','AF','AFN'],srmet:['Bibhuti','Barun','Mean','Indra','Yuvraj','Pooja','Aakash']};
+const DEFAULT_STAFF={
+  observer:   [],   // populated from sheet (no separate observer sheet in MFD)
+  forecaster: [],   // populated from sheet
+  srmet:      ['Bibhuti','Mean','Barun','Binu','Devid','Hari','Rojan','Sanjib','Saroj','Aakash','Pooja','Poonam','Ruby','Yubraj','Manu','Indra']
+};
 function getData(){const s=S.get('mfd_data');if(s)return s;return{staff:JSON.parse(JSON.stringify(DEFAULT_STAFF)),months:[],sharedSources:[],adminPin:'1234'};}
 function saveData(d){ S.set('mfd_data',d) }
 
@@ -543,10 +547,29 @@ function showRosterFor(name, type){
   }
   container.innerHTML=duties.map(entry=>{
     const shift=entry.shift||'';
+    // Shift code descriptions for MFD roster
+    const SHIFT_DESC={
+      'SM':'Morning (SM)','SD':'Day (SD)','SA':'Aviation Day (SA)',
+      'AF':'Afternoon (AF)','MF':'Morning Forecast (MF)','AFN':'Afternoon Night (AFN)',
+      'AFN*':'AFN Night*','MF*':'MF Morning*','AF*':'AF*',
+      'DA':'Day Aviation (DA)','A1':'Aviation 1 (A1)','M1':'Morning 1 (M1)',
+      'NWP':'NWP','D':'Day (D)','M':'Morning (M)',
+      'घर बिदा':'Home Leave','xx':'Off','XX':'Off'
+    };
+    // Color classes
+    const SHIFT_COLOR={
+      'SM':'#1d4ed8','SD':'#1d4ed8','SA':'#0369a1',
+      'AF':'#7c3aed','MF':'#6d28d9','AFN':'#4c1d95','AFN*':'#4c1d95','MF*':'#6d28d9','AF*':'#7c3aed',
+      'DA':'#065f46','A1':'#047857','M1':'#059669',
+      'NWP':'#92400e','D':'#1e40af','M':'#1d4ed8',
+      'घर बिदा':'#374151','xx':'#374151','XX':'#374151'
+    };
+    const desc=SHIFT_DESC[shift]||shift;
+    const color=SHIFT_COLOR[shift]||'#334155';
     return `<div class="day-card">
       <div class="date-row">
         <span class="eng-date">Day ${entry.day}</span>
-        <span class="shift ${shift}">${shift||'—'}</span>
+        <span class="shift" style="background:${color};color:#f1f5f9;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700">${desc}</span>
       </div>
     </div>`;
   }).join('');
@@ -583,14 +606,15 @@ function importXlsx(){
   reader.readAsArrayBuffer(pendingFile);
 }
 
-// ─── processRosterRows (fully rewritten for MFD sheet format) ────────────────
-// Sheet layout (confirmed from Jestha_Roster_mfd.xlsx):
-//   Col A = DAY label (Fri/Sat…)   → skip
-//   Col B = Nepali date number     → use as day number
-//   Col C = English date           → skip
-//   Col D onwards = staff names    → start from index 3
-//   Last 4 cols (Night/AF/MF/Leave)→ summary cols, skip
-// headerRow is 1-based.
+// ─── processRosterRows — MFD Jestha sheet format ─────────────────────────────
+// Confirmed layout (Jestha_Roster_mfd.xlsx):
+//   Col A (0) = DAY label (Fri/Sat…)          → skip
+//   Col B (1) = Nepali date गते (1,2,3…)      → day number
+//   Col C (2) = English date (Excel serial)   → skip
+//   Col D (3) onwards = staff names
+//   Last 4 cols in header = Night, AF, MF, Leave → summary, skip
+// Staff names may have suffixes: "Bibhuti (Public)" → clean to "Bibhuti"
+// headerRow is 1-based (default 7 for MFD sheet).
 function processRosterRows(rows, headerRow, type, monthEn, monthNp, source){
   const headerIdx = headerRow - 1;
 
@@ -601,103 +625,105 @@ function processRosterRows(rows, headerRow, type, monthEn, monthNp, source){
 
   const headerRowData = rows[headerIdx];
 
-  // ── Detect where staff names start ──────────────────────────────────────
-  // Skip leading cols that are labels: DAY, date numbers, "Date", "Incharge", etc.
-  // A cell is a "label" (not a staff name) if it matches known non-name patterns.
-  const SKIP_LABELS = /^(day|date|गते|incharge|s\.?no|sn|sl|#)$/i;
+  // ── Clean a raw header cell into a staff name ────────────────────────────
+  // Strips parenthetical suffixes: "Bibhuti (Public)" → "Bibhuti"
+  // Also trims whitespace.
+  function cleanName(raw){
+    return String(raw||'').replace(/\s*\(.*?\)\s*/g,'').trim();
+  }
 
-  // Find first col that looks like a real staff name
-  let staffStartCol = 1; // default: col B
+  // ── Labels that mark non-staff columns ───────────────────────────────────
+  // These appear as leading cols (skip at start) OR trailing summary cols (skip at end)
+  const LEADING_LABELS  = /^(day|date|गते|incharge|s\.?no|sn|sl|#)$/i;
+  // Summary/footer cols at the right end of the header row
+  const TRAILING_LABELS = /^(night|af|mf|leave|total|remarks|note|absent|present|अफ|एमएफ)$/i;
+
+  // ── Find staff start col (first col that is a real name) ─────────────────
+  let staffStartCol = 3; // default col D (index 3) for MFD sheet
   for(let c = 0; c < headerRowData.length; c++){
-    const v = String(headerRowData[c]||'').trim();
+    const v = cleanName(headerRowData[c]);
     if(!v) continue;
-    if(SKIP_LABELS.test(v)) continue;
-    // If it looks like a date (pure number or contains '/') skip it
-    if(/^\d+$/.test(v) || /\d+\/\d+/.test(v)) continue;
+    if(LEADING_LABELS.test(v)) continue;
+    if(/^\d+$/.test(v) || /\d+\/\d+/.test(v)) continue; // skip pure numbers / date serials
     staffStartCol = c;
     break;
   }
 
-  // ── Detect summary cols at the end ──────────────────────────────────────
-  // Known summary headers that are NOT staff names
-  const SUMMARY_LABELS = /^(night|leave|total|remarks|note|अफ|एमएफ|absent|present)$/i;
+  // ── Trim trailing summary cols ────────────────────────────────────────────
   let staffEndCol = headerRowData.length - 1;
   for(let c = headerRowData.length - 1; c >= staffStartCol; c--){
-    const v = String(headerRowData[c]||'').trim();
-    if(!v || SUMMARY_LABELS.test(v)){
+    const v = cleanName(headerRowData[c]);
+    if(!v || TRAILING_LABELS.test(v)){
       staffEndCol = c - 1;
     } else {
       break;
     }
   }
 
-  // ── Build staff column map ───────────────────────────────────────────────
+  // ── Build staff column map (colIndex → cleanedName) ───────────────────────
   const staffNames = [];
   const staffColMap = {}; // colIndex → name
   for(let c = staffStartCol; c <= staffEndCol; c++){
-    const val = String(headerRowData[c]||'').trim();
-    if(val && !SUMMARY_LABELS.test(val)){
-      staffNames.push(val);
-      staffColMap[c] = val;
-    }
+    const raw = headerRowData[c];
+    const name = cleanName(raw);
+    // Skip if still looks like a summary label or is empty
+    if(!name || TRAILING_LABELS.test(name)) continue;
+    // Skip if pure number (could be an Excel date serial leaked into header)
+    if(/^\d{4,}$/.test(name)) continue;
+    staffNames.push(name);
+    staffColMap[c] = name;
   }
 
   if(staffNames.length === 0){
     logImport('❌ No staff names found in row '+headerRow+
-      '. Scanned cols '+staffStartCol+'–'+staffEndCol+
-      '. Check that row '+headerRow+' contains names like "Pooja", "Rojan" etc.');
+      '. Cols scanned: '+staffStartCol+'–'+staffEndCol+
+      '. Raw header: '+JSON.stringify(headerRowData.slice(0,6)));
     return;
   }
 
-  // ── Find which column holds the day number ───────────────────────────────
-  // Usually col B (index 1) has the Nepali date (1,2,3…) or col A has text day names
-  // We detect this by scanning the first data row and finding an integer 1-32
-  let dayCol = 1; // default col B
+  // ── Find the day-number column ────────────────────────────────────────────
+  // Col B (index 1) = Nepali गते day (1–32).
+  // Detect by scanning first data row for a small integer 1–32
+  // that is NOT a large Excel serial (>1000).
+  let dayCol = 1;
   const firstDataRow = rows[headerIdx + 1] || [];
   for(let c = 0; c < staffStartCol; c++){
     const v = firstDataRow[c];
-    const n = typeof v === 'number' ? v : parseInt(String(v||''));
+    const n = typeof v === 'number' ? v : parseFloat(String(v||''));
     if(!isNaN(n) && n >= 1 && n <= 32){
       dayCol = c;
       break;
     }
   }
 
-  // ── Update staff list ────────────────────────────────────────────────────
-  // Also auto-assign known duty-code names to their correct role bucket
-  const DUTY_ROLE_MAP={
-    'AO':'observer','MO':'observer',
-    'MF':'forecaster','AF':'forecaster','AFN':'forecaster',
-    'Bibhuti':'srmet','Barun':'srmet','Mean':'srmet',
-    'Indra':'srmet','Yuvraj':'srmet','Pooja':'srmet','Aakash':'srmet'
-  };
+  // ── Merge extracted names into staff list ─────────────────────────────────
   const d = getData();
   const existing = new Set(d.staff[type]||[]);
-  staffNames.forEach(n => {
-    existing.add(n);
-    // If this name belongs to a different role bucket, add it there too
-    const mappedRole = DUTY_ROLE_MAP[n];
-    if(mappedRole && mappedRole !== type){
-      if(!d.staff[mappedRole]) d.staff[mappedRole]=[];
-      if(!d.staff[mappedRole].includes(n)) d.staff[mappedRole].push(n);
-    }
-  });
+  staffNames.forEach(n => existing.add(n));
   d.staff[type] = [...existing];
 
-  // ── Parse duty rows ──────────────────────────────────────────────────────
+  // ── Parse duty rows ───────────────────────────────────────────────────────
   const duties = {};
   staffNames.forEach(n => duties[n] = []);
+
+  // Day-name labels used in col A (to help confirm a row is a real duty row)
+  const DAY_LABELS = new Set(['sun','mon','tue','wed','thu','fri','sat',
+    'आइत','सोम','मंगल','बुध','बिहि','शुक्र','शनि']);
 
   for(let r = headerIdx + 1; r < rows.length; r++){
     const row = rows[r];
     if(!row || row.length === 0) continue;
 
-    // Get day number
+    // ── Get day number from dayCol ──────────────────────────────────────
     const rawDay = row[dayCol];
-    const day = typeof rawDay === 'number'
+    const dayNum = typeof rawDay === 'number'
       ? Math.round(rawDay)
       : parseInt(String(rawDay||'').trim());
-    if(isNaN(day) || day < 1 || day > 32) continue; // skip non-day rows
+    if(isNaN(dayNum) || dayNum < 1 || dayNum > 33) continue;
+
+    // Extra guard: col A should be a weekday name (or empty for extra rows)
+    const colA = String(row[0]||'').trim().toLowerCase();
+    if(colA && !DAY_LABELS.has(colA)) continue; // skip summary/footer rows
 
     for(const [colStr, name] of Object.entries(staffColMap)){
       const col = parseInt(colStr);
@@ -707,19 +733,21 @@ function processRosterRows(rows, headerRow, type, monthEn, monthNp, source){
       if(raw === null || raw === undefined || raw === ''){
         shift = '';
       } else if(typeof raw === 'object' && raw instanceof Date){
-        // Excel stored shift code like "9-5" as a date (m-d format) → convert back
-        shift = raw.getMonth()+1 + '-' + raw.getDate();
-      } else if(typeof raw === 'object' && raw.toISOString){
-        // Date-like object from XLSX/CSV parser
+        shift = (raw.getMonth()+1)+'-'+raw.getDate();
+      } else if(typeof raw === 'object' && raw != null && typeof raw.toISOString === 'function'){
         const d2 = new Date(raw);
-        shift = (d2.getMonth()+1) + '-' + d2.getDate();
+        shift = (d2.getMonth()+1)+'-'+d2.getDate();
       } else {
         shift = String(raw).trim();
       }
 
-      // Clean up shift value
-      shift = shift.replace(/^'+|'+$/g,'').trim(); // remove leading apostrophes (Excel escape)
-      if(shift) duties[name].push({day, shift});
+      // Strip Excel apostrophe escapes and normalize
+      shift = shift.replace(/^'+|'+$/g,'').trim();
+
+      // Skip blank, XX (off day), or घर बिदा (home leave shown as off)
+      if(!shift || /^(xx|XX)$/.test(shift)) continue;
+
+      duties[name].push({day: dayNum, shift});
     }
   }
 

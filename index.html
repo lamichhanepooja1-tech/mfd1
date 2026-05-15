@@ -411,12 +411,13 @@ function saveData(d){ S.set('mfd_data',d) }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
+  checkDriveConnection();       // show Drive status immediately
+  restoreGapiToken();           // silently restore gapi token if still valid
   autoSyncSharedSources();
   renderNameSelect();
   renderSavedSources();
   renderStaffLists();
   renderMonthsList();
-  checkDriveConnection();
 });
 
 // ─── AUTO SYNC: All users pull from shared sources on load ────────────────────
@@ -636,17 +637,24 @@ function logImport(msg){
 // ─── GOOGLE DRIVE INTEGRATION ─────────────────────────────────────────────────
 function checkDriveConnection(){
   const clientId=S.get('mfd_oauth_clientid');
-  const token=S.get('mfd_drive_token');
+  const tokenInfo=S.get('mfd_drive_token');
   const el=document.getElementById('driveStatus');
   const scanBtn=document.getElementById('scanBtn');
-  if(clientId&&token){
-    state.driveToken=token;
-    el.innerHTML='<span class="text-green">✓ Drive connected</span>';
+  // Token is valid if it exists, has access_token, and hasn't expired (with 5min buffer)
+  const isValid=tokenInfo&&tokenInfo.access_token&&
+    (!tokenInfo.expires_at||Date.now()<tokenInfo.expires_at-300000);
+  if(clientId&&isValid){
+    state.driveToken=tokenInfo;
+    el.innerHTML='<span class="text-green">✓ Drive connected</span> <span class="text-muted text-sm">(session active)</span>';
     scanBtn.disabled=false;
   } else if(clientId){
-    el.innerHTML='<span class="status-pill pill-info">Client ID saved — not authenticated yet</span>';
+    // Clear expired token
+    if(tokenInfo&&!isValid){ S.del('mfd_drive_token'); state.driveToken=null; }
+    el.innerHTML='<span class="status-pill pill-info">Client ID saved — click Connect Drive to sign in</span>';
+    scanBtn.disabled=true;
   } else {
     el.innerHTML='<span class="text-muted">Drive not connected</span>';
+    scanBtn.disabled=true;
   }
 }
 
@@ -658,42 +666,95 @@ function connectDrive(){
   if(!id){alert('Please paste your OAuth Client ID.');return;}
   S.set('mfd_oauth_clientid',id);
   closeDriveModal();
-  // Load Google API script then init
-  if(!window.gapi){
-    const s=document.createElement('script');
-    s.src='https://apis.google.com/js/api.js';
-    s.onload=()=>initGapi(id);
-    document.head.appendChild(s);
-  } else {
-    initGapi(id);
-  }
+  loadGISAndAuth(id);
 }
 
-function initGapi(clientId){
-  gapi.load('client:auth2',()=>{
-    gapi.client.init({
-      clientId,
-      scope:'https://www.googleapis.com/auth/drive.readonly',
-      discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
-    }).then(()=>{
-      const authInst=gapi.auth2.getAuthInstance();
-      if(authInst.isSignedIn.get()){
-        const token=gapi.client.getToken();
-        S.set('mfd_drive_token',token);
-        state.driveToken=token;
-        checkDriveConnection();
-        alert('✓ Drive connected successfully!');
-      } else {
-        authInst.signIn().then(()=>{
-          const token=gapi.client.getToken();
-          S.set('mfd_drive_token',token);
-          state.driveToken=token;
+// ─── NEW: Google Identity Services (GIS) + gapi.client ───────────────────────
+// Replaces deprecated gapi.auth2. Uses two separate scripts:
+//   1. https://apis.google.com/js/api.js  → gapi.client (Drive API calls)
+//   2. https://accounts.google.com/gsi/client → google.accounts.oauth2 (token flow)
+function loadGISAndAuth(clientId){
+  // Step 1: load gapi.client for Drive API
+  function loadGapiClient(cb){
+    if(window.gapi&&gapi.client){cb();return;}
+    const s=document.createElement('script');
+    s.src='https://apis.google.com/js/api.js';
+    s.onload=()=>gapi.load('client',()=>{
+      gapi.client.init({}).then(()=>
+        gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest')
+      ).then(cb).catch(e=>alert('gapi init error: '+JSON.stringify(e)));
+    });
+    document.head.appendChild(s);
+  }
+
+  // Step 2: load GIS token client and request token
+  function loadGISToken(cb){
+    if(window.google&&google.accounts){cb();return;}
+    const s=document.createElement('script');
+    s.src='https://accounts.google.com/gsi/client';
+    s.onload=cb;
+    document.head.appendChild(s);
+  }
+
+  loadGapiClient(()=>{
+    loadGISToken(()=>{
+      const tokenClient=google.accounts.oauth2.initTokenClient({
+        client_id:clientId,
+        scope:'https://www.googleapis.com/auth/drive.readonly',
+        callback:(tokenResponse)=>{
+          if(tokenResponse.error){
+            alert('Sign-in failed: '+tokenResponse.error);
+            return;
+          }
+          // Store token and expiry
+          const tokenInfo={
+            access_token:tokenResponse.access_token,
+            expires_at:Date.now()+(tokenResponse.expires_in||3600)*1000
+          };
+          S.set('mfd_drive_token',tokenInfo);
+          S.set('mfd_oauth_clientid',clientId);
+          state.driveToken=tokenInfo;
+          // Set token on gapi.client so Drive API calls are authenticated
+          gapi.client.setToken({access_token:tokenResponse.access_token});
           checkDriveConnection();
-          alert('✓ Drive connected!');
-        }).catch(e=>alert('Sign-in failed: '+e.error));
-      }
-    }).catch(e=>alert('Init error: '+e.details));
+          alert('✓ Drive connected! You can now scan the Roster folder.');
+        }
+      });
+      tokenClient.requestAccessToken({prompt:'consent'});
+    });
   });
+}
+
+// Restore gapi token on page load if we have a saved token that isn't expired
+function restoreGapiToken(){
+  const clientId=S.get('mfd_oauth_clientid');
+  const tokenInfo=S.get('mfd_drive_token');
+  if(!clientId||!tokenInfo||!tokenInfo.access_token) return;
+  // Check expiry (5 min buffer)
+  if(tokenInfo.expires_at&&Date.now()>tokenInfo.expires_at-300000){
+    // Token expired — clear it but keep clientId so user can reconnect easily
+    S.del('mfd_drive_token');
+    state.driveToken=null;
+    return;
+  }
+  // Load gapi.client silently and restore token
+  if(window.gapi&&gapi.client){
+    gapi.client.setToken({access_token:tokenInfo.access_token});
+    state.driveToken=tokenInfo;
+    return;
+  }
+  const s=document.createElement('script');
+  s.src='https://apis.google.com/js/api.js';
+  s.onload=()=>gapi.load('client',()=>{
+    gapi.client.init({}).then(()=>
+      gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest')
+    ).then(()=>{
+      gapi.client.setToken({access_token:tokenInfo.access_token});
+      state.driveToken=tokenInfo;
+      checkDriveConnection();
+    }).catch(()=>{});
+  });
+  document.head.appendChild(s);
 }
 
 // ─── FIXED: Scan Roster folder ────────────────────────────────────────────────

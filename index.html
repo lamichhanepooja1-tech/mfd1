@@ -230,8 +230,8 @@
       </div>
       <div class="form-group">
         <label>Header row (row number containing staff names)</label>
-        <input type="number" id="upHeaderRow" value="7" min="1" max="30"/>
-        <div class="text-muted text-sm mt8">⚠️ Row 7 means the 7th row of the sheet (index 6). Staff names must be in columns B onwards.</div>
+        <input type="number" id="upHeaderRow" value="7" min="1" max="30" oninput="updateRowHint('upHeaderRow','upRowHint')"/>
+        <div class="text-muted text-sm mt8" id="upRowHint">⚠️ Row 7 means the 7th row of the sheet. Staff names must be in columns B onwards.</div>
       </div>
       <button class="btn btn-primary" onclick="importXlsx()">⬇️ Import</button>
     </div>
@@ -295,8 +295,8 @@
       </div>
       <div class="form-group">
         <label>Header row (row number with staff names)</label>
-        <input type="number" id="csvHeaderRow" value="7" min="1" max="30"/>
-        <div class="text-muted text-sm mt8">Row 7 = 7th row of the sheet. Staff names in columns B onwards.</div>
+        <input type="number" id="csvHeaderRow" value="7" min="1" max="30" oninput="updateRowHint('csvHeaderRow','csvRowHint')"/>
+        <div class="text-muted text-sm mt8" id="csvRowHint">⚠️ Row 7 means the 7th row of the sheet. Staff names must be in columns B onwards.</div>
       </div>
       <div class="form-group">
         <label>Month name (English)</label>
@@ -570,9 +570,10 @@ function importXlsx(){
   const reader=new FileReader();
   reader.onload=function(e){
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      // raw:false converts numbers/dates properly; defval:'' for empty cells
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,dateNF:'m-d'});
       processRosterRows(rows, headerRow, type, monthEn, monthNp, 'xlsx');
     }catch(err){
       logImport('❌ Error reading file: '+err.message);
@@ -581,72 +582,146 @@ function importXlsx(){
   reader.readAsArrayBuffer(pendingFile);
 }
 
-// ─── FIXED: processRosterRows ─────────────────────────────────────────────────
-// headerRow is 1-based (e.g. 7 means row index 6)
-// Staff names are in row[headerRowIndex] starting from column index 1 (col B onwards)
-// Data rows start after the header row
+// ─── processRosterRows (fully rewritten for MFD sheet format) ────────────────
+// Sheet layout (confirmed from Jestha_Roster_mfd.xlsx):
+//   Col A = DAY label (Fri/Sat…)   → skip
+//   Col B = Nepali date number     → use as day number
+//   Col C = English date           → skip
+//   Col D onwards = staff names    → start from index 3
+//   Last 4 cols (Night/AF/MF/Leave)→ summary cols, skip
+// headerRow is 1-based.
 function processRosterRows(rows, headerRow, type, monthEn, monthNp, source){
-  const headerIdx=headerRow-1; // convert to 0-based
+  const headerIdx = headerRow - 1;
 
-  if(rows.length<=headerIdx){
-    logImport('❌ Sheet has fewer rows than specified header row ('+headerRow+')');
+  if(rows.length <= headerIdx){
+    logImport('❌ Sheet has only '+rows.length+' rows — header row '+headerRow+' not found.');
     return;
   }
 
-  const headerRowData=rows[headerIdx];
-  // FIX: collect ALL non-empty columns starting from index 1 (skip col A which is usually day/date label)
-  const staffNames=[];
-  const staffColMap={}; // colIndex -> name
-  for(let c=1;c<headerRowData.length;c++){
-    const val=String(headerRowData[c]||'').trim();
-    if(val){
+  const headerRowData = rows[headerIdx];
+
+  // ── Detect where staff names start ──────────────────────────────────────
+  // Skip leading cols that are labels: DAY, date numbers, "Date", "Incharge", etc.
+  // A cell is a "label" (not a staff name) if it matches known non-name patterns.
+  const SKIP_LABELS = /^(day|date|गते|incharge|s\.?no|sn|sl|#)$/i;
+
+  // Find first col that looks like a real staff name
+  let staffStartCol = 1; // default: col B
+  for(let c = 0; c < headerRowData.length; c++){
+    const v = String(headerRowData[c]||'').trim();
+    if(!v) continue;
+    if(SKIP_LABELS.test(v)) continue;
+    // If it looks like a date (pure number or contains '/') skip it
+    if(/^\d+$/.test(v) || /\d+\/\d+/.test(v)) continue;
+    staffStartCol = c;
+    break;
+  }
+
+  // ── Detect summary cols at the end ──────────────────────────────────────
+  // Known summary headers that are NOT staff names
+  const SUMMARY_LABELS = /^(night|af|mf|leave|total|remarks|note|अफ|एमएफ|absent|present)$/i;
+  let staffEndCol = headerRowData.length - 1;
+  for(let c = headerRowData.length - 1; c >= staffStartCol; c--){
+    const v = String(headerRowData[c]||'').trim();
+    if(!v || SUMMARY_LABELS.test(v)){
+      staffEndCol = c - 1;
+    } else {
+      break;
+    }
+  }
+
+  // ── Build staff column map ───────────────────────────────────────────────
+  const staffNames = [];
+  const staffColMap = {}; // colIndex → name
+  for(let c = staffStartCol; c <= staffEndCol; c++){
+    const val = String(headerRowData[c]||'').trim();
+    if(val && !SUMMARY_LABELS.test(val)){
       staffNames.push(val);
-      staffColMap[c]=val;
+      staffColMap[c] = val;
     }
   }
 
-  if(staffNames.length===0){
-    logImport('❌ No staff names found in row '+headerRow+'. Check the header row number.');
+  if(staffNames.length === 0){
+    logImport('❌ No staff names found in row '+headerRow+
+      '. Scanned cols '+staffStartCol+'–'+staffEndCol+
+      '. Check that row '+headerRow+' contains names like "Pooja", "Rojan" etc.');
     return;
   }
 
-  // Update staff list (merge, no duplicates)
-  const d=getData();
-  const existing=new Set(d.staff[type]||[]);
-  staffNames.forEach(n=>existing.add(n));
-  d.staff[type]=[...existing];
-
-  // Parse duty rows (rows after header)
-  const duties={};
-  staffNames.forEach(n=>duties[n]=[]);
-
-  for(let r=headerIdx+1;r<rows.length;r++){
-    const row=rows[r];
-    const dayVal=String(row[0]||'').trim();
-    if(!dayVal||isNaN(parseInt(dayVal))) continue; // skip empty/non-day rows
-    const day=parseInt(dayVal);
-
-    for(const [colStr,name] of Object.entries(staffColMap)){
-      const col=parseInt(colStr);
-      const shift=String(row[col]||'').trim().toUpperCase();
-      if(shift){
-        duties[name].push({day, shift});
-      }
+  // ── Find which column holds the day number ───────────────────────────────
+  // Usually col B (index 1) has the Nepali date (1,2,3…) or col A has text day names
+  // We detect this by scanning the first data row and finding an integer 1-32
+  let dayCol = 1; // default col B
+  const firstDataRow = rows[headerIdx + 1] || [];
+  for(let c = 0; c < staffStartCol; c++){
+    const v = firstDataRow[c];
+    const n = typeof v === 'number' ? v : parseInt(String(v||''));
+    if(!isNaN(n) && n >= 1 && n <= 32){
+      dayCol = c;
+      break;
     }
   }
 
-  // Save month (replace if same name+type exists)
-  const monthId=type+'_'+monthEn.replace(/\s/g,'_');
-  const existing_m_idx=d.months.findIndex(m=>m.id===monthId);
-  const monthObj={id:monthId,nameEn:monthEn,nameNp:monthNp,type,duties};
-  if(existing_m_idx>=0) d.months[existing_m_idx]=monthObj;
+  // ── Update staff list ────────────────────────────────────────────────────
+  const d = getData();
+  const existing = new Set(d.staff[type]||[]);
+  staffNames.forEach(n => existing.add(n));
+  d.staff[type] = [...existing];
+
+  // ── Parse duty rows ──────────────────────────────────────────────────────
+  const duties = {};
+  staffNames.forEach(n => duties[n] = []);
+
+  for(let r = headerIdx + 1; r < rows.length; r++){
+    const row = rows[r];
+    if(!row || row.length === 0) continue;
+
+    // Get day number
+    const rawDay = row[dayCol];
+    const day = typeof rawDay === 'number'
+      ? Math.round(rawDay)
+      : parseInt(String(rawDay||'').trim());
+    if(isNaN(day) || day < 1 || day > 32) continue; // skip non-day rows
+
+    for(const [colStr, name] of Object.entries(staffColMap)){
+      const col = parseInt(colStr);
+      const raw = row[col];
+      let shift = '';
+
+      if(raw === null || raw === undefined || raw === ''){
+        shift = '';
+      } else if(typeof raw === 'object' && raw instanceof Date){
+        // Excel stored shift code like "9-5" as a date (m-d format) → convert back
+        shift = raw.getMonth()+1 + '-' + raw.getDate();
+      } else if(typeof raw === 'object' && raw.toISOString){
+        // Date-like object from XLSX/CSV parser
+        const d2 = new Date(raw);
+        shift = (d2.getMonth()+1) + '-' + d2.getDate();
+      } else {
+        shift = String(raw).trim();
+      }
+
+      // Clean up shift value
+      shift = shift.replace(/^'+|'+$/g,'').trim(); // remove leading apostrophes (Excel escape)
+      if(shift) duties[name].push({day, shift});
+    }
+  }
+
+  // ── Save month ───────────────────────────────────────────────────────────
+  const monthId = type + '_' + monthEn.replace(/\s/g,'_');
+  const existing_m_idx = d.months.findIndex(m => m.id === monthId);
+  const monthObj = {id:monthId, nameEn:monthEn, nameNp:monthNp, type, duties};
+  if(existing_m_idx >= 0) d.months[existing_m_idx] = monthObj;
   else d.months.push(monthObj);
 
   saveData(d);
   renderNameSelect();
   renderStaffLists();
   renderMonthsList();
-  logImport(`✓ [${source}] Imported ${staffNames.length} staff for "${monthEn}" (${type}). Names: ${staffNames.join(', ')}`);
+
+  const totalDuties = Object.values(duties).reduce((s,a)=>s+a.length,0);
+  logImport('✓ ['+source+'] Imported '+staffNames.length+' staff, '+
+    totalDuties+' duty entries for "'+monthEn+'" ('+type+').\n   Staff: '+staffNames.join(', '));
 }
 
 function logImport(msg){
@@ -1131,6 +1206,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   bar.appendChild(backBtn);
 });
+
+// ─── Dynamic row hint ────────────────────────────────────────────────────────
+function updateRowHint(inputId, hintId){
+  const n=parseInt(document.getElementById(inputId).value)||1;
+  const hint=document.getElementById(hintId);
+  if(!hint) return;
+  hint.textContent=`⚠️ Row ${n} means the ${ordinal(n)} row of the sheet. Staff names must be in columns B onwards.`;
+}
+function ordinal(n){
+  const s=['th','st','nd','rd'];
+  const v=n%100;
+  return n+(s[(v-20)%10]||s[v]||s[0]);
+}
 
 // ─── Drag and drop ────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
